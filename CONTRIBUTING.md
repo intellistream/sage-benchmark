@@ -17,7 +17,7 @@ Thank you for your interest in contributing to sage-benchmark! This document pro
 ### What Goes Elsewhere
 
 - ❌ Generic benchmarks → [OmniBenchmark](https://github.com/intellistream/OmniBenchmark)
-- ❌ Agent-specific benchmarks → [sage-benchmark-agent](https://github.com/intellistream/sage-benchmark-agent)
+- ❌ Agent-specific benchmarks → [sage-agent-benchmark](https://github.com/intellistream/sage-agent-benchmark)
 - ❌ Core SAGE components → [SAGE](https://github.com/intellistream/SAGE)
 - ❌ Application examples → [sage-examples](https://github.com/intellistream/sage-examples)
 
