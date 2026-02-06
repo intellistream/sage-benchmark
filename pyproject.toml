@@ -1,0 +1,177 @@
+# ============================================================================
+# SAGE Benchmark Package Configuration
+# ============================================================================
+# SAGE framework-specific system benchmarks and experiments
+# Complementary to OmniBenchmark (organization-level benchmark collection)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 构建系统配置
+# ----------------------------------------------------------------------------
+[build-system]
+requires = [
+    "setuptools>=65.0",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+# ----------------------------------------------------------------------------
+# 项目元数据
+# ----------------------------------------------------------------------------
+[project]
+name = "isage-sage-benchmark"
+dynamic = ["version"]
+description = "SAGE Benchmark - SAGE framework-specific system-level benchmarks"
+readme = "README.md"
+requires-python = ">=3.10"
+
+# 许可证
+license = {text = "MIT"}
+
+# 项目作者
+authors = [
+    {name = "IntelliStream Team", email = "shuhao_zhang@hust.edu.cn"}
+]
+
+# PyPI 搜索关键词
+keywords = [
+    "sage", "benchmark", "system-benchmark", "end-to-end",
+    "icml", "artifacts", "evaluation", "intellistream",
+    "pipeline", "dataflow", "ml-systems"
+]
+
+# PyPI 分类器
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: System :: Benchmark",
+]
+
+# ----------------------------------------------------------------------------
+# 核心依赖 - 运行 SAGE benchmark 所需的依赖
+# ----------------------------------------------------------------------------
+dependencies = [
+    # SAGE 核心组件（从 PyPI）
+    "isage-common>=0.2.0",              # L1: 基础工具和配置
+    "isage-platform>=0.2.0",            # L2: 平台服务
+    "isage-kernel>=0.2.0",              # L3: Dataflow引擎
+    "isage-libs>=0.2.0",                # L3: RAG、智能体和算法库
+    "isage-middleware>=0.2.4.0",        # L4: 操作符和组件
+
+    # 配置管理
+    "pyyaml>=6.0",                      # 配置文件解析
+    
+    # 数据处理
+    "numpy>=1.26.0,<2.3.0",             # 数组操作
+    "pandas>=2.0.0",                    # 数据分析
+    
+    # 可视化
+    "matplotlib>=3.7.0",                # 绘图
+    "seaborn>=0.12.0",                  # 统计可视化
+    
+    # CLI 工具
+    "typer>=0.15.0,<1.0.0",             # CLI 框架
+    "rich>=13.0.0,<14.0.0",             # 终端美化输出
+]
+
+# ----------------------------------------------------------------------------
+# 可选依赖组 - 按功能模块分组的可选依赖
+# ----------------------------------------------------------------------------
+[project.optional-dependencies]
+
+# Control Plane 实验依赖
+control-plane = [
+    "psutil>=5.9.0",                    # 系统资源监控
+]
+
+# E2E Pipeline 实验依赖
+pipeline = [
+    "scikit-learn>=1.3.0",              # 机器学习工具
+]
+
+# 开发和测试依赖
+dev = [
+    "pytest>=7.0.0",                    # 测试框架
+    "pytest-cov>=4.0.0",                # 覆盖率报告
+    "ruff==0.14.6",                     # 代码检查和格式化（与 SAGE 主仓库版本一致）
+    "mypy>=1.0.0",                      # 静态类型检查
+    "black>=23.0.0",                    # 代码格式化
+]
+
+# 完整安装（所有功能）
+all = [
+    "isage-sage-benchmark[control-plane,pipeline,dev]",
+]
+
+# ----------------------------------------------------------------------------
+# 工具配置
+# ----------------------------------------------------------------------------
+[tool.setuptools]
+packages = ["sage_benchmark"]
+package-dir = {"" = "."}
+
+[tool.setuptools.dynamic]
+version = {attr = "sage_benchmark._version.__version__"}
+
+# ----------------------------------------------------------------------------
+# Ruff 配置
+# ----------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+]
+ignore = [
+    "E501",   # line-too-long (handled by formatter)
+    "B008",   # function-call-in-default-argument
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ----------------------------------------------------------------------------
+# Mypy 配置
+# ----------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+# ----------------------------------------------------------------------------
+# Pytest 配置
+# ----------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers"
+
+# ----------------------------------------------------------------------------
+# 项目 URLs
+# ----------------------------------------------------------------------------
+[project.urls]
+Homepage = "https://github.com/intellistream/sage-benchmark"
+Repository = "https://github.com/intellistream/sage-benchmark"
+Documentation = "https://sage.intellistream.com"
+"Bug Tracker" = "https://github.com/intellistream/sage-benchmark/issues"

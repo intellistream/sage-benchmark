@@ -1,0 +1,44 @@
+#!/bin/bash
+# Pre-commit hook for sage-benchmark
+# Runs code quality checks before allowing commit
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# Check if ruff is installed
+if ! command -v ruff &> /dev/null; then
+    echo "⚠️  ruff not found, skipping format check"
+else
+    echo "📝 Checking code formatting..."
+    if ! ruff format --check .; then
+        echo "❌ Code formatting issues found. Run: ruff format ."
+        exit 1
+    fi
+    echo "✅ Code formatting check passed"
+
+    echo "🔍 Running linter..."
+    if ! ruff check .; then
+        echo "❌ Linting issues found. Run: ruff check --fix ."
+        exit 1
+    fi
+    echo "✅ Linting check passed"
+fi
+
+# Check for common issues
+echo "🔍 Checking for common issues..."
+
+# Check for hardcoded API keys
+if git diff --cached --name-only | xargs grep -i "api[_-]key\s*=\s*['\"]sk-" 2>/dev/null; then
+    echo "❌ Hardcoded API keys detected!"
+    exit 1
+fi
+
+# Check for debug statements
+if git diff --cached --name-only | xargs grep -i "import pdb\|breakpoint()" 2>/dev/null; then
+    echo "⚠️  Debug statements detected (pdb/breakpoint)"
+    echo "Remove them or use --no-verify to skip this check"
+    exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"

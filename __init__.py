@@ -5,3 +5,7 @@ an end-to-end dataflow-based ML systems platform, not just an LLM
 control plane. It can host ICML-oriented experiment configs, runners,
 analysis code, and writing prompts.
 """
+
+from ._version import __version__, __author__, __email__
+
+__all__ = ["__version__", "__author__", "__email__"]
