@@ -4,8 +4,8 @@
 
 **sage-benchmark** is SAGE framework-specific system-level benchmarking repository, focused on end-to-end experiments and performance validation of the SAGE platform.
 
-**Repository**: https://github.com/intellistream/sage-benchmark  
-**PyPI**: `isage-sage-benchmark`  
+**Repository**: https://github.com/intellistream/sage-benchmark
+**PyPI**: `isage-sage-benchmark`
 **Layer**: L5 (Applications - Benchmarking, independent repository)
 
 **Important Distinction**:
@@ -154,20 +154,20 @@ import yaml
 
 class ExperimentXY:
     """Brief description."""
-    
+
     def __init__(self, config_path: Path):
         """Initialize with configuration."""
         with open(config_path) as f:
             self.config = yaml.safe_load(f)
-    
+
     def setup(self) -> None:
         """Set up experiment."""
         pass
-    
+
     def run(self) -> dict[str, Any]:
         """Run experiment and return results."""
         pass
-    
+
     def teardown(self) -> None:
         """Clean up resources."""
         pass
@@ -182,11 +182,11 @@ Use YAML for all configurations in `config/`:
 experiment:
   name: "Experiment X.Y"
   description: "Brief description"
-  
+
 parameters:
   # Experiment-specific parameters
   key: value
-  
+
 output:
   dir: "results/exp_X_Y"
   format: "json"
@@ -196,32 +196,32 @@ output:
 
 ### Experiment 5.1: End-to-End Pipeline
 
-**File**: `experiments/exp_5_1_e2e_pipeline.py`  
-**Config**: `config/exp_5_1.yaml`  
+**File**: `experiments/exp_5_1_e2e_pipeline.py`
+**Config**: `config/exp_5_1.yaml`
 **Purpose**: Benchmark complete SAGE dataflow pipeline performance
 
 ### Experiment 5.2: Control Plane Scheduling
 
-**File**: `experiments/exp_5_2_control_plane.py`  
-**Config**: `config/exp_5_2.yaml`  
+**File**: `experiments/exp_5_2_control_plane.py`
+**Config**: `config/exp_5_2.yaml`
 **Purpose**: Evaluate LLM/embedding Control Plane scheduling policies
 
 ### Experiment 5.3: Isolation
 
-**File**: `experiments/exp_5_3_isolation.py`  
-**Config**: `config/exp_5_3.yaml`  
+**File**: `experiments/exp_5_3_isolation.py`
+**Config**: `config/exp_5_3.yaml`
 **Purpose**: Measure resource isolation between components
 
 ### Experiment 5.4: Scalability
 
-**File**: `experiments/exp_5_4_scalability.py`  
-**Config**: `config/exp_5_4.yaml`  
+**File**: `experiments/exp_5_4_scalability.py`
+**Config**: `config/exp_5_4.yaml`
 **Purpose**: Test horizontal and vertical scaling
 
 ### Experiment 5.5: Heterogeneity
 
-**File**: `experiments/exp_5_5_heterogeneity.py`  
-**Config**: `config/exp_5_5.yaml`  
+**File**: `experiments/exp_5_5_heterogeneity.py`
+**Config**: `config/exp_5_5.yaml`
 **Purpose**: Validate cross-platform deployment
 
 ## SAGE Dependency Reference
@@ -304,13 +304,13 @@ class MyExperiment:
 ```python
 def benchmark_function(param: int) -> float:
     """Brief description.
-    
+
     Args:
         param: Parameter description
-        
+
     Returns:
         Result description
-        
+
     Raises:
         ValueError: When condition
     """
