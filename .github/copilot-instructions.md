@@ -326,7 +326,7 @@ Each experiment should have:
 2. **Config file**: YAML with parameters
 3. **Design doc** (optional): `docs/exp_X_Y_design.md`
 
-## Version Management
+## Version Management & Publishing
 
 Follows SAGE's 4-digit versioning: `MAJOR.MINOR.PATCH.BUILD`
 
@@ -335,7 +335,47 @@ Follows SAGE's 4-digit versioning: `MAJOR.MINOR.PATCH.BUILD`
 - **PATCH** (0): Bug fixes
 - **BUILD** (0): Per-commit increments
 
-Update `_version.py` for each release.
+### Publishing Workflow (Manual, One-by-One)
+
+**🚨 CRITICAL: NEVER use bash scripts for publishing. ALWAYS use sage-pypi-publisher CLI tool directly.**
+
+1. **Update version**: Edit `_version.py`
+   ```bash
+   # _sage_benchmark/_version.py
+   __version__ = "X.Y.Z.W"
+   ```
+
+2. **Commit and tag**:
+   ```bash
+   git commit -m "chore: bump version to X.Y.Z.W"
+   git tag -a vX.Y.Z.W -m "Release sage-benchmark X.Y.Z.W"
+   git push origin vX.Y.Z.W
+   ```
+
+3. **Publish to TestPyPI** (test first):
+   ```bash
+   cd /path/to/sage-benchmark
+   sage-pypi-publisher build . --upload -r testpypi --no-dry-run
+   ```
+
+4. **Publish to Production PyPI** (same command, change repository):
+   ```bash
+   cd /path/to/sage-benchmark
+   sage-pypi-publisher build . --upload -r pypi --no-dry-run
+   ```
+
+### Key Commands
+
+```bash
+# ✅ CORRECT: Manual one-by-one using sage-pypi-publisher
+cd /path/to/sage-benchmark && sage-pypi-publisher build . --upload -r testpypi --no-dry-run
+
+# ❌ WRONG: Using bash scripts
+# ./publish.sh sage-benchmark  # Use CLI directly instead
+
+# ❌ WRONG: Using bash loops
+# for pkg in ...; do sage-pypi-publisher ...; done
+```
 
 ## Contributing
 
