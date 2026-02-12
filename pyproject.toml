@@ -20,7 +20,7 @@ build-backend = "setuptools.build_meta"
 # ----------------------------------------------------------------------------
 [project]
 name = "isage-sage-benchmark"
-dynamic = ["version"]
+version = "0.1.0.1"  # 静态版本，避免动态导入问题
 description = "SAGE Benchmark - SAGE framework-specific system-level benchmarks"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -114,11 +114,13 @@ all = [
 # 工具配置
 # ----------------------------------------------------------------------------
 [tool.setuptools]
-packages = ["sage_benchmark"]
-package-dir = {"" = "."}
+# 扁平布局：根目录包含 Python 包内容，包名为 sage_benchmark
+py-modules = ["_version", "__init__", "__main__"]
 
-[tool.setuptools.dynamic]
-version = {attr = "sage_benchmark._version.__version__"}
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["config*", "experiments*", "latex*", "scripts*"]
+exclude = ["tests*", "hooks*", "docs*"]
 
 # ----------------------------------------------------------------------------
 # Ruff 配置
