@@ -394,6 +394,16 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
 
 ## Key Principles for Copilot
 
+### NO Summary Documents After Task Completion
+
+**CRITICAL**: Do NOT create summary, recap, or documentation files after completing tasks unless explicitly requested.
+- ❌ NO "work_summary.md", "changes_summary.md", or similar
+- ❌ NO "completion reports" or status documents
+- ✅ DO provide brief inline messages in the conversation
+- ✅ DO use commit messages for documentation (git history is your record)
+
+### Core Working Principles
+
 When working with sage-benchmark:
 
 1. **Documentation-first**: Check existing experiments and configs before implementing
