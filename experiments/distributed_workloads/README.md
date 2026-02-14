@@ -251,8 +251,8 @@ def build_workload_5(self) -> WorkloadPipelineFactory:
 ## 📚 相关文档
 
 - **设计文档**: `/home/sage/SAGE/WORKLOAD_DESIGNS.md`
-- **SAGE架构**: `docs-public/docs_src/dev-notes/package-architecture.md`
-- **Operator开发**: `docs-public/docs_src/dev-notes/l4-middleware/operators.md`
+- **SAGE架构**: `CHANGELOG.md`
+- **Operator开发**: `CHANGELOG.md`
 
 ## ⚠️ 注意事项
 
