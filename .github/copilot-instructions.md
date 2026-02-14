@@ -355,20 +355,20 @@ Follows SAGE's 4-digit versioning: `MAJOR.MINOR.PATCH.BUILD`
 3. **Publish to TestPyPI** (test first):
    ```bash
    cd /path/to/sage-benchmark
-   sage-pypi-publisher build . --upload -r testpypi --no-dry-run
+   sage-pypi-publisher publish . -r testpypi --no-dry-run
    ```
 
 4. **Publish to Production PyPI** (same command, change repository):
    ```bash
    cd /path/to/sage-benchmark
-   sage-pypi-publisher build . --upload -r pypi --no-dry-run
+   sage-pypi-publisher publish . -r pypi --no-dry-run
    ```
 
 ### Key Commands
 
 ```bash
-# ✅ CORRECT: Manual one-by-one using sage-pypi-publisher
-cd /path/to/sage-benchmark && sage-pypi-publisher build . --upload -r testpypi --no-dry-run
+# ✅ CORRECT: Manual one-by-one using publish command (一步完成)
+cd /path/to/sage-benchmark && sage-pypi-publisher publish . -r testpypi --no-dry-run
 
 # ❌ WRONG: Using bash scripts
 # ./publish.sh sage-benchmark  # Use CLI directly instead
