@@ -66,6 +66,12 @@ from .request_utils import (
     RequestResult,
     WorkloadGenerator,
 )
+from .reproducibility import (
+    ParityPlan,
+    build_input_parity_plan,
+    compute_config_fingerprint,
+    set_global_seed,
+)
 from .result_writer import (
     CSV_FIELD_ORDER,
     append_jsonl_record,
@@ -128,4 +134,9 @@ __all__ = [
     "BenchmarkClient",
     "RequestResult",
     "WorkloadGenerator",
+    # reproducibility
+    "ParityPlan",
+    "set_global_seed",
+    "compute_config_fingerprint",
+    "build_input_parity_plan",
 ]

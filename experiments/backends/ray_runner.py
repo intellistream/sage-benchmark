@@ -103,6 +103,11 @@ class RayRunner(WorkloadRunner):
       a second ``ray.init`` call in the same process.
     - ``sleep_per_item`` (float, default ``0.01``): sleep seconds injected into
       each process step to simulate compute, matching the SAGE runner default.
+        - ``input_batches`` (list[list[str]], optional): fixed benchmark input
+            batches for backend parity. If set, overrides generated ``item_<n>``
+            source tokens.
+        - ``warmup_items`` (list[str], optional): deterministic warmup input set;
+            warmup is executed before timed benchmark run and excluded from metrics.
     """
 
     @property
@@ -145,6 +150,8 @@ class RayRunner(WorkloadRunner):
         ignore_reinit: bool = bool(spec.extra.get("ray_ignore_reinit_error", True))
         num_cpus_per_task: float = float(spec.extra.get("num_cpus_per_task", 0.5))
         sleep_per_item: float = float(spec.extra.get("sleep_per_item", 0.01))
+        provided_batches: list[list[str]] | None = spec.extra.get("input_batches")
+        warmup_items: list[str] = list(spec.extra.get("warmup_items", []))
 
         if not ray.is_initialized():
             init_kwargs: dict[str, Any] = {"ignore_reinit_error": ignore_reinit}
@@ -174,9 +181,13 @@ class RayRunner(WorkloadRunner):
                 return item
 
         # ------------------------------------------------------------------
-        # Source: generate item tokens (mirrors SAGE _Source output)
+        # Source: use fixed parity batches when provided, otherwise generate
+        # default item tokens.
         # ------------------------------------------------------------------
-        items = [f"item_{i}" for i in range(spec.total_items)]
+        if provided_batches:
+            items = [item for batch in provided_batches for item in batch]
+        else:
+            items = [f"item_{i}" for i in range(spec.total_items)]
 
         # ------------------------------------------------------------------
         # Pipeline execution via Ray remote tasks
@@ -186,6 +197,13 @@ class RayRunner(WorkloadRunner):
         collected: list[str] = []
         tasks_submitted: int = 0
         tasks_succeeded: int = 0
+
+        # Warmup pass (not timed / not counted)
+        if warmup_items:
+            warmup_process_refs = [_process.remote(item) for item in warmup_items]
+            warmup_processed: list[str] = ray.get(warmup_process_refs)
+            warmup_filter_refs = [_filter.remote(item) for item in warmup_processed]
+            _ = ray.get(warmup_filter_refs)
 
         start = time.time()
 
@@ -216,7 +234,10 @@ class RayRunner(WorkloadRunner):
         metrics: dict[str, Any] = {
             "tasks_submitted": tasks_submitted,
             "tasks_succeeded": tasks_succeeded,
-            "items_filtered_out": spec.total_items - tasks_succeeded,
+            "items_filtered_out": len(items) - tasks_succeeded,
+            "warmup_items": len(warmup_items),
+            "input_items": len(items),
+            "sampling_strategy": spec.extra.get("sampling_strategy", "default_generated"),
         }
 
         # Attempt to collect cluster-level node info (non-fatal if unavailable)

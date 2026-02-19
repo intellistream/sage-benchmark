@@ -21,6 +21,7 @@ class Workload4Config:
     duration: int = 1200  # 20分钟
     use_remote: bool = True
     num_nodes: int = 8
+    seed: int = 42
 
     # === 双流配置 ===
     query_qps: float = 40.0  # 查询流QPS
@@ -176,6 +177,8 @@ class Workload4Config:
 
     def validate(self) -> bool:
         """验证配置合法性"""
+        assert self.seed >= 0, "seed must be non-negative"
+
         # QPS
         assert self.query_qps > 0, "query_qps must be positive"
         assert self.doc_qps > 0, "doc_qps must be positive"
@@ -220,6 +223,7 @@ class Workload4Config:
             "duration": self.duration,
             "use_remote": self.use_remote,
             "num_nodes": self.num_nodes,
+            "seed": self.seed,
             "query_qps": self.query_qps,
             "doc_qps": self.doc_qps,
             "join_window_seconds": self.join_window_seconds,

@@ -350,6 +350,7 @@ class Workload4Pipeline:
             qps=self.config.query_qps,
             query_types=list(self.config.query_type_distribution.keys()),
             categories=list(self.config.category_distribution.keys()),
+            seed=self.config.seed,
             use_fiqa=False,  # 可配置
         )
         print(f"✓ Created Query Stream (QPS={self.config.query_qps})")
@@ -360,6 +361,7 @@ class Workload4Pipeline:
             num_docs=self.config.num_tasks * 20,  # 每个query对应20个doc
             qps=self.config.doc_qps,
             categories=list(self.config.category_distribution.keys()),
+            seed=self.config.seed + 1,
         )
         print(f"✓ Created Document Stream (QPS={self.config.doc_qps})")
 

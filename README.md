@@ -94,6 +94,29 @@ produce comparable `run_config` records.
 
 Individual workloads may add extra flags on top of the shared contract.
 
+## Reproducibility Checklist (Issue #4)
+
+For fair cross-backend comparisons (SAGE vs Ray), keep these controls fixed:
+
+- Use the same `--seed` for both backends.
+- Use the same warmup policy (`--warmup-items`) before timed runs.
+- Use deterministic input parity split (`deterministic_shuffle_v1`) and fixed batch size.
+- Persist and compare `config_hash` in output artifacts.
+- Keep workload shape (`--nodes`, `--parallelism`, `--repeat`) identical.
+
+Workload4 now writes `repro_manifest.json` with seed, parity batches, warmup split,
+and configuration fingerprint.
+
+Example:
+
+```bash
+python experiments/distributed_workloads/run_workload4.py \
+  --backend sage --seed 42 --warmup-items 5 --parity-batch-size 16
+
+python experiments/distributed_workloads/run_workload4.py \
+  --backend ray --seed 42 --warmup-items 5 --parity-batch-size 16
+```
+
 At the repo root, `docs/icml-prompts/` contains reusable writing prompts. You can either reference
 them directly or copy customized versions into this folder when preparing a specific ICML
 submission.

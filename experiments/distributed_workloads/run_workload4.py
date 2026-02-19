@@ -28,11 +28,13 @@ Workload 4 执行脚本
 """
 
 import argparse
+import json
 import logging
 import os
 import sys
 import time
 import traceback
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -60,6 +62,12 @@ if str(_BACKENDS_ROOT) not in sys.path:
 
 from workload4.config import Workload4Config
 from workload4.pipeline import Workload4Pipeline
+
+from common.reproducibility import (
+    build_input_parity_plan,
+    compute_config_fingerprint,
+    set_global_seed,
+)
 
 # =============================================================================
 # 日志配置
@@ -213,6 +221,27 @@ def parse_args() -> argparse.Namespace:
         help="Ray 后端批提交并行度（默认: 4）",
     )
 
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="全局随机种子（默认: 42）",
+    )
+
+    parser.add_argument(
+        "--warmup-items",
+        type=int,
+        default=5,
+        help="预热输入条目数（默认: 5，0 表示禁用预热）",
+    )
+
+    parser.add_argument(
+        "--parity-batch-size",
+        type=int,
+        default=16,
+        help="跨后端输入分片 batch 大小（默认: 16）",
+    )
+
     return parser.parse_args()
 
 
@@ -262,6 +291,7 @@ def load_config(args: argparse.Namespace) -> Workload4Config:
                 "duration": args.duration,
                 "use_remote": args.use_remote,
                 "num_nodes": args.num_nodes,
+                "seed": args.seed,
                 "query_qps": args.query_qps,
                 "doc_qps": args.doc_qps,
                 "join_window_seconds": args.join_window,
@@ -349,6 +379,7 @@ def print_config_summary(config: Workload4Config) -> None:
     print(f"  任务数量:        {config.num_tasks}")
     print(f"  运行时长:        {config.duration}s ({config.duration // 60}分钟)")
     print(f"  分布式节点:      {config.num_nodes}")
+    print(f"  随机种子:        {config.seed}")
     print(f"  调度策略:        {config.scheduler_type} ({config.scheduler_strategy})")
 
     print("\n【双流配置】")
@@ -430,12 +461,79 @@ def print_metrics_summary(metrics_dir: Path) -> None:
     print("=" * 80 + "\n")
 
 
+def _build_repro_manifest(args: argparse.Namespace, config: Workload4Config) -> dict[str, Any]:
+    """Build deterministic reproducibility context for a benchmark run."""
+    parity_plan = build_input_parity_plan(
+        total_items=config.num_tasks,
+        seed=args.seed,
+        warmup_count=args.warmup_items,
+        batch_size=args.parity_batch_size,
+        item_prefix="item",
+    )
+
+    run_payload: dict[str, Any] = {
+        "workload": "workload4",
+        "backend": args.backend,
+        "seed": args.seed,
+        "warmup_items": args.warmup_items,
+        "parity_batch_size": args.parity_batch_size,
+        "sampling_strategy": parity_plan.sampling_strategy,
+        "effective_config": config.to_dict(),
+    }
+    config_hash = compute_config_fingerprint(run_payload)
+
+    return {
+        "config_hash": config_hash,
+        "run_payload": run_payload,
+        "parity_plan": parity_plan.to_dict(),
+    }
+
+
+def _write_repro_manifest(metrics_dir: Path, manifest: dict[str, Any]) -> Path:
+    """Persist reproducibility manifest next to benchmark artifacts."""
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    target = metrics_dir / "repro_manifest.json"
+    target.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return target
+
+
+def _run_sage_warmup(config: Workload4Config, warmup_items: int) -> None:
+    """Run a standardized warmup pass for the SAGE backend."""
+    bounded_warmup = min(max(warmup_items, 0), config.num_tasks)
+    if bounded_warmup <= 0:
+        return
+
+    warmup_payload = asdict(config)
+    warmup_payload.update(
+        {
+            "num_tasks": bounded_warmup,
+            "duration": max(1, int(bounded_warmup / max(config.query_qps, 1.0)) + 1),
+            "enable_profiling": False,
+            "metrics_output_dir": str(Path(config.metrics_output_dir) / "warmup"),
+        }
+    )
+    warmup_config = Workload4Config(**warmup_payload)
+
+    logging.info(
+        "执行标准化预热（SAGE backend）: warmup_items=%s, duration=%ss",
+        warmup_config.num_tasks,
+        warmup_config.duration,
+    )
+    warmup_pipeline = Workload4Pipeline(warmup_config)
+    warmup_pipeline.build(name="workload4_warmup")
+    warmup_pipeline.run()
+
+
 # =============================================================================
 # Ray 后端入口（MVP）
 # =============================================================================
 
 
-def _run_ray_backend(args: argparse.Namespace, config: Workload4Config) -> int:
+def _run_ray_backend(
+    args: argparse.Namespace,
+    config: Workload4Config,
+    repro_manifest: dict[str, Any],
+) -> int:
     """Run Workload 4 via the Ray backend runner.
 
     Maps the Workload4Config fields to a backend-agnostic WorkloadSpec and
@@ -477,6 +575,10 @@ def _run_ray_backend(args: argparse.Namespace, config: Workload4Config) -> int:
     extra: dict[str, Any] = {
         "max_wait_seconds": config.duration,
         "sleep_per_item": 0.01,
+        "input_batches": repro_manifest["parity_plan"]["benchmark_batches"],
+        "warmup_items": repro_manifest["parity_plan"]["warmup_items"],
+        "sampling_strategy": repro_manifest["parity_plan"]["sampling_strategy"],
+        "seed": args.seed,
     }
     if hasattr(args, "ray_address") and args.ray_address:
         extra["ray_address"] = args.ray_address
@@ -520,7 +622,11 @@ def _run_ray_backend(args: argparse.Namespace, config: Workload4Config) -> int:
     output_dir = Path(config.metrics_output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     result_path = output_dir / "ray_backend_result.txt"
-    result_path.write_text(result.summary() + f"\nWall clock (s): {wall_time:.3f}\n")
+    result_path.write_text(
+        result.summary()
+        + f"\nWall clock (s): {wall_time:.3f}\n"
+        + f"Config hash: {repro_manifest['config_hash']}\n"
+    )
     logging.info(f"[Ray] 结果已保存到: {result_path}")
 
     return 0
@@ -554,6 +660,11 @@ def main() -> int:
 
         # 3. 加载配置
         config = load_config(args)
+        set_global_seed(args.seed)
+        repro_manifest = _build_repro_manifest(args, config)
+        manifest_path = _write_repro_manifest(Path(config.metrics_output_dir), repro_manifest)
+        logging.info(f"Reproducibility manifest: {manifest_path}")
+        logging.info(f"Config fingerprint: {repro_manifest['config_hash']}")
         print_config_summary(config)
 
         # 4. Dry run 模式
@@ -568,11 +679,12 @@ def main() -> int:
         # Ray 后端路径 (MVP)
         # ------------------------------------------------------------------
         if backend_name == "ray":
-            return _run_ray_backend(args, config)
+            return _run_ray_backend(args, config, repro_manifest)
 
         # ------------------------------------------------------------------
         # SAGE 后端路径（原有逻辑）
         # ------------------------------------------------------------------
+        _run_sage_warmup(config, args.warmup_items)
 
         # 5. 检查环境变量
         required_vars = ["OPENAI_API_KEY", "HF_TOKEN"]
@@ -612,6 +724,7 @@ def main() -> int:
                 logging.info(f"端到端延迟: {metrics.end_to_end_time:.2f}s")
                 logging.info(f"CPU 时间:    {metrics.cpu_time:.2f}s")
                 logging.info(f"内存峰值:    {metrics.memory_peak_mb:.2f}MB")
+                logging.info(f"Config hash: {repro_manifest['config_hash']}")
                 logging.info("=" * 80)
 
             # 9. 打印指标文件摘要
