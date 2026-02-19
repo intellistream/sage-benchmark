@@ -222,27 +222,78 @@ class ConfigLoader:
 
     def get_default_config(self, section: str) -> ExperimentConfig:
         """Get default configuration for a given experiment section."""
+        key = section.upper()
+
         defaults = {
-            "5.1": ExperimentConfig(
-                name="exp_5_1_control_plane",
-                description="Control Plane Unified Scheduling Experiment",
-                experiment_section="5.1",
+            "Q1": ExperimentConfig(
+                name="q1_pipelinechain",
+                description=(
+                    "Q1 PipelineChain (e2e_pipeline): "
+                    "End-to-end RAG pipeline workload family"
+                ),
+                experiment_section="Q1",
+            ),
+            "Q2": ExperimentConfig(
+                name="q2_controlmix",
+                description=(
+                    "Q2 ControlMix (control_plane): "
+                    "Mixed LLM+embedding scheduling workload family"
+                ),
+                experiment_section="Q2",
                 baselines=["sage_unified", "vllm_only", "separated"],
             ),
-            "5.2": ExperimentConfig(
-                name="exp_5_2_scheduling",
-                description="Scheduling Policy Comparison Experiment",
-                experiment_section="5.2",
+            "Q3": ExperimentConfig(
+                name="q3_noisyneighbor",
+                description=(
+                    "Q3 NoisyNeighbor (isolation): "
+                    "Multi-tenant interference/isolation workload family"
+                ),
+                experiment_section="Q3",
+            ),
+            "Q4": ExperimentConfig(
+                name="q4_scalefrontier",
+                description=(
+                    "Q4 ScaleFrontier (scalability): "
+                    "Scale-out throughput/latency workload family"
+                ),
+                experiment_section="Q4",
                 policies=["fifo", "priority", "slo_aware", "hybrid"],
             ),
-            "5.3": ExperimentConfig(
-                name="exp_5_3_e2e",
-                description="End-to-End System Evaluation",
-                experiment_section="5.3",
+            "Q5": ExperimentConfig(
+                name="q5_heteroresilience",
+                description=(
+                    "Q5 HeteroResilience (heterogeneity): "
+                    "Heterogeneous deployment and recovery workload family"
+                ),
+                experiment_section="Q5",
+            ),
+            "Q6": ExperimentConfig(
+                name="q6_bursttown",
+                description=(
+                    "Q6 BurstTown (burst_priority): "
+                    "Bursty mixed-priority transactional workload family"
+                ),
+                experiment_section="Q6",
+            ),
+            "Q7": ExperimentConfig(
+                name="q7_reconfigdrill",
+                description=(
+                    "Q7 ReconfigDrill (reconfiguration): "
+                    "Online reconfiguration drill workload family"
+                ),
+                experiment_section="Q7",
+            ),
+            "Q8": ExperimentConfig(
+                name="q8_recoverysoak",
+                description=(
+                    "Q8 RecoverySoak (recovery): "
+                    "Fault-recovery soak workload family"
+                ),
+                experiment_section="Q8",
             ),
         }
         return defaults.get(
-            section,
+            key,
             ExperimentConfig(name="unknown", description="Unknown", experiment_section=section),
         )
 

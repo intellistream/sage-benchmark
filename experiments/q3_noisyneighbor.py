@@ -7,16 +7,13 @@ from sage.benchmark.benchmark_sage.experiments.common import BenchmarkClient, Wo
 
 class IsolationExperiment(BaseExperiment):
     """
-    Experiment for Multi-tenant Isolation and Fairness.
+    Q3 NoisyNeighbor workload.
 
-    Simulates a "noisy neighbor" scenario where a high-throughput batch workload
-    competes with a latency-sensitive interactive workload.
+    Simulates multi-tenant isolation pressure with interactive and batch tenants.
     """
 
     def _setup_impl(self) -> None:
-        # Generator for "Interactive" user (Latency sensitive)
         self.interactive_gen = WorkloadGenerator(llm_ratio=1.0, seed=42)
-        # Generator for "Batch" user (Throughput focused)
         self.batch_gen = WorkloadGenerator(llm_ratio=0.5, seed=99)
 
     def _run_impl(self) -> None:
@@ -25,19 +22,13 @@ class IsolationExperiment(BaseExperiment):
     async def _run_async(self) -> None:
         config = self.config
 
-        # Scenario:
-        # User A (Interactive): Low rate (e.g., 5 req/s), expects low latency.
-        # User B (Batch): High rate (e.g., 50 req/s), floods the system.
-
         interactive_rate = 5.0
-        batch_rate = config.workload.request_rate  # Main rate controls the noise level
-
-        duration = 30  # seconds
+        batch_rate = config.workload.request_rate
+        duration = 30
 
         async with BenchmarkClient(config.gateway_url) as client:
             tasks = []
 
-            # Launch Interactive User Loop
             tasks.append(
                 asyncio.create_task(
                     self._run_user_loop(
@@ -46,7 +37,6 @@ class IsolationExperiment(BaseExperiment):
                 )
             )
 
-            # Launch Batch User Loop
             tasks.append(
                 asyncio.create_task(
                     self._run_user_loop(client, "batch", batch_rate, duration, self.batch_gen)
@@ -65,13 +55,9 @@ class IsolationExperiment(BaseExperiment):
         req_idx = 0
 
         while time.perf_counter() - start_time < duration:
-            # Poisson arrival
-            await asyncio.sleep(1.0 / rate)  # Simple constant rate for now to ensure pressure
+            await asyncio.sleep(1.0 / rate)
 
             req_type, params = generator.generate_request(f"{user_id}-{req_idx}")
-
-            # Add metadata to track which user this was
-            # Note: In a real system, we'd pass a user-id header.
 
             if req_type == "llm":
                 res = await client.send_llm_request(
@@ -82,7 +68,6 @@ class IsolationExperiment(BaseExperiment):
                     f"{user_id}-{req_idx}", params["texts"], self.config.embedding_model.name
                 )
 
-            # Tag result with user_id for analysis
             res.metadata["user_id"] = user_id
             results.append(res)
             req_idx += 1

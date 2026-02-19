@@ -7,7 +7,7 @@ HeadNodeScheduler: 限制 Source 和 Sink 在 Head 节点执行
 工作原理:
 - Source 节点 → 绑定到 head 节点
 - Sink 节点 → 绑定到 head 节点
-- 其他节点 → 使用 Ray 默认负载均衡
+- 其他节点 → 使用 sageFlownet 默认负载均衡
 
 使用场景:
 - RemoteEnvironment 远程执行计算
@@ -17,6 +17,7 @@ HeadNodeScheduler: 限制 Source 和 Sink 在 Head 节点执行
 
 from __future__ import annotations
 
+import os
 import socket
 from typing import Optional
 
@@ -31,13 +32,13 @@ class HeadNodeScheduler(BaseScheduler):
     工作原理:
     - Source 节点 → 绑定到 head 节点（数据输入）
     - Sink 节点 → 绑定到 head 节点（结果输出）
-    - 其他节点 → 使用 Ray 默认负载均衡（计算在集群分布）
+    - 其他节点 → 使用 sageFlownet 默认负载均衡（计算在集群分布）
 
     使用场景:
     - RemoteEnvironment 远程执行计算
     - 数据源和结果输出需要在本地可见
 
-    注意: 需要在 Ray 集群环境中运行
+    注意: 需要在 sageFlownet 集群环境中运行
     """
 
     def __init__(self, head_node_id: Optional[str] = None):
@@ -53,25 +54,26 @@ class HeadNodeScheduler(BaseScheduler):
         self._cached_node_id: Optional[str] = None
 
     def _get_head_node_id(self) -> Optional[str]:
-        """获取 head 节点的 Ray node ID"""
+        """获取 head 节点的节点 ID。
+
+        优先读取 sageFlownet 启动时写入的 FLOWNET_NODE_ID 环境变量，
+        未检测到运行时时回退到主机名。
+        """
         if self._head_node_id is not None:
             return self._head_node_id
 
         if self._cached_node_id is not None:
             return self._cached_node_id
 
-        try:
-            import ray
+        # sageFlownet 在节点启动时将节点 ID 写入 FLOWNET_NODE_ID 环境变量
+        flownet_node_id = os.environ.get("FLOWNET_NODE_ID")
+        if flownet_node_id:
+            self._cached_node_id = flownet_node_id
+            return self._cached_node_id
 
-            if not ray.is_initialized():
-                return None
-
-            # 获取当前节点的 node ID（假设当前节点是 head）
-            current_node_id = ray.get_runtime_context().get_node_id()
-            self._cached_node_id = current_node_id
-            return current_node_id
-        except Exception:
-            return None
+        # 未检测到 sageFlownet 运行时：使用主机名作为节点标识
+        self._cached_node_id = self.local_hostname
+        return self._cached_node_id
 
     def _is_source_or_sink(self, task_name: str) -> tuple[bool, str]:
         """判断是否是 Source 或 Sink 节点

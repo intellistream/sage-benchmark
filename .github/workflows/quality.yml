@@ -1,0 +1,46 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, main-dev, develop]
+  pull_request:
+    branches: [main, main-dev]
+  workflow_dispatch:
+
+jobs:
+  ruff:
+    name: Ruff Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff==0.14.6
+
+      - name: Ruff check
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+  legacy-ray-guard:
+    name: Legacy Ray Term Guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run legacy term test
+        run: pytest tests/test_legacy_terms.py -v

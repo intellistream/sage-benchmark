@@ -21,6 +21,31 @@ Suggested uses:
 - Configs (`config/*.yaml`) for system-track experiments described in an ICML paper.
 - Notebook or script entry points that reproduce figures/tables.
 
+## Q-style Workload Catalog (TPC-H/TPC-C inspired)
+
+`benchmark_sage` adopts a fixed `Q1..Q8` catalog where each Q denotes a workload family
+rather than a one-off script. This keeps paper claims, configs, and run outputs aligned.
+
+| Query | Name | Entry | Workload Family |
+|---|---|---|---|
+| Q1 | PipelineChain | `e2e_pipeline` | End-to-end RAG pipeline workloads |
+| Q2 | ControlMix | `control_plane` | Mixed LLM+embedding scheduling workloads |
+| Q3 | NoisyNeighbor | `isolation` | Multi-tenant interference and isolation workloads |
+| Q4 | ScaleFrontier | `scalability` | Scale-out throughput/latency workloads |
+| Q5 | HeteroResilience | `heterogeneity` | Heterogeneous deployment and recovery workloads |
+| Q6 | BurstTown | `burst_priority` | Bursty mixed-priority transactional workloads |
+| Q7 | ReconfigDrill | `reconfiguration` | Online reconfiguration drill workloads |
+| Q8 | RecoverySoak | `recovery` | Fault-recovery soak workloads |
+
+Examples:
+
+```bash
+python -m sage.benchmark.benchmark_sage --experiment Q1
+python -m sage.benchmark.benchmark_sage --experiment Q3 --quick
+python -m sage.benchmark.benchmark_sage --experiment Q7 --quick
+python -m sage.benchmark.benchmark_sage --all
+```
+
 At the repo root, `docs/icml-prompts/` contains reusable writing prompts. You can either reference
 them directly or copy customized versions into this folder when preparing a specific ICML
 submission.

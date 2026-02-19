@@ -2,15 +2,17 @@ import asyncio
 import time
 
 from sage.benchmark.benchmark_sage.experiments.base_experiment import BaseExperiment
-from sage.benchmark.benchmark_sage.experiments.common import BenchmarkClient, WorkloadGenerator
+from sage.benchmark.benchmark_sage.experiments.common import (
+    BenchmarkClient,
+    WorkloadGenerator,
+)
 
 
-class HeterogeneityExperiment(BaseExperiment):
+class ControlPlaneExperiment(BaseExperiment):
     """
-    Experiment for Heterogeneous Hardware Support.
+    Q2 ControlMix workload.
 
-    Demonstrates the system's ability to utilize CPU nodes for specific tasks
-    (e.g., Embeddings) to offload GPUs for LLM tasks.
+    Evaluates unified control-plane performance under mixed workloads.
     """
 
     def _setup_impl(self) -> None:
@@ -24,10 +26,6 @@ class HeterogeneityExperiment(BaseExperiment):
     async def _run_async(self) -> None:
         config = self.config
         workload = self.workload_generator
-
-        # In a real run, this would target a specific gateway configuration.
-        # Here we run the workload and the user is expected to have configured
-        # the backend with CPU offloading enabled for Embeddings.
 
         requests_data = []
         for i in range(config.workload.total_requests):
@@ -64,6 +62,32 @@ class HeterogeneityExperiment(BaseExperiment):
                 tasks.append(task)
 
             self.results = await asyncio.gather(*tasks)
+
+    def _run_warmup(self) -> None:
+        asyncio.run(self._run_warmup_async())
+
+    async def _run_warmup_async(self) -> None:
+        config = self.config
+        workload = self.workload_generator
+
+        async with BenchmarkClient(config.gateway_url) as client:
+            tasks = []
+            for i in range(config.workload.warmup_requests):
+                req_type, params = workload.generate_request(f"warmup-{i}")
+                if req_type == "llm":
+                    tasks.append(
+                        client.send_llm_request(
+                            f"warmup-{i}", params["prompt"], config.llm_model.name
+                        )
+                    )
+                else:
+                    tasks.append(
+                        client.send_embedding_request(
+                            f"warmup-{i}", params["texts"], config.embedding_model.name
+                        )
+                    )
+
+            await asyncio.gather(*tasks)
 
     def _teardown_impl(self) -> None:
         pass

@@ -715,7 +715,7 @@ class SchedulingBenchmarkPipeline:
 
             from sage.kernel.api.remote_environment import RemoteEnvironment
 
-            # Get the experiments directory path for Ray runtime_env
+            # Get the experiments directory path for sageFlownet runtime_env
             experiments_dir = Path(__file__).resolve().parent.parent
 
             # Get sage-benchmark/src for proper module resolution
@@ -724,7 +724,7 @@ class SchedulingBenchmarkPipeline:
             sage_benchmark_src = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
 
             # CRITICAL: Set PYTHONPATH environment variable BEFORE creating RemoteEnvironment
-            # This ensures RayQueueManager (created during environment setup) can find common module
+            # This ensures FlownetQueueDescriptor (created during environment setup) can find common module
             pythonpath_value = f"{sage_benchmark_src}:{experiments_dir}"
             existing_pythonpath = os.environ.get("PYTHONPATH", "")
             if existing_pythonpath:
@@ -732,7 +732,7 @@ class SchedulingBenchmarkPipeline:
             os.environ["PYTHONPATH"] = pythonpath_value
             print(f"[Pipeline] Set PYTHONPATH: {pythonpath_value}")
 
-            # Create config with runtime_env for Ray to find our modules
+            # Create config with runtime_env for sageFlownet to find our modules
             config = {
                 "runtime_env": {
                     "env_vars": {"PYTHONPATH": pythonpath_value},

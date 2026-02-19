@@ -15,11 +15,14 @@ from sage.benchmark.benchmark_sage.experiments.config import (
     ModelConfig,
     WorkloadConfig,
 )
-from sage.benchmark.benchmark_sage.experiments.exp_5_1_e2e_pipeline import E2EPipelineExperiment
-from sage.benchmark.benchmark_sage.experiments.exp_5_2_control_plane import ControlPlaneExperiment
-from sage.benchmark.benchmark_sage.experiments.exp_5_3_isolation import IsolationExperiment
-from sage.benchmark.benchmark_sage.experiments.exp_5_4_scalability import ScalabilityExperiment
-from sage.benchmark.benchmark_sage.experiments.exp_5_5_heterogeneity import HeterogeneityExperiment
+from sage.benchmark.benchmark_sage.experiments.q1_pipelinechain import E2EPipelineExperiment
+from sage.benchmark.benchmark_sage.experiments.q2_controlmix import ControlPlaneExperiment
+from sage.benchmark.benchmark_sage.experiments.q3_noisyneighbor import IsolationExperiment
+from sage.benchmark.benchmark_sage.experiments.q4_scalefrontier import ScalabilityExperiment
+from sage.benchmark.benchmark_sage.experiments.q5_heteroresilience import HeterogeneityExperiment
+from sage.benchmark.benchmark_sage.experiments.q6_bursttown import BurstTownExperiment
+from sage.benchmark.benchmark_sage.experiments.q7_reconfigdrill import ReconfigDrillExperiment
+from sage.benchmark.benchmark_sage.experiments.q8_recoverysoak import RecoverySoakExperiment
 from sage.benchmark.benchmark_sage.experiments.plotting import Plotter
 
 __all__ = [
@@ -37,5 +40,8 @@ __all__ = [
     "E2EPipelineExperiment",
     "HeterogeneityExperiment",
     "IsolationExperiment",
+    "BurstTownExperiment",
+    "ReconfigDrillExperiment",
+    "RecoverySoakExperiment",
     "Plotter",
 ]
