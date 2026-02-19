@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import uuid
 from pathlib import Path
 
 
@@ -230,6 +231,10 @@ Examples:
             rep_output = output_dir / exp_q.lower() / (f"rep{rep}" if args.repeat > 1 else "")
             experiment.output_dir = rep_output
             experiment.output_dir.mkdir(parents=True, exist_ok=True)
+            experiment.backend = args.backend
+            experiment.nodes = int(args.nodes)
+            experiment.parallelism = int(args.parallelism)
+            experiment.run_id = f"{exp_q.lower()}-{args.backend}-{rep}-{uuid.uuid4().hex[:8]}"
             try:
                 experiment.setup()
                 result = experiment.run()

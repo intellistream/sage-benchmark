@@ -15,7 +15,9 @@
 """
 
 import argparse
+import uuid
 import time
+from pathlib import Path
 
 from sage.common.core import MapFunction, SinkFunction, SourceFunction
 from sage.kernel.api import FlownetEnvironment
@@ -29,6 +31,12 @@ from common.execution_guard import run_pipeline_bounded
 # script is executed directly (Python adds the script's directory).
 import backends.sage_runner  # noqa: F401  registers "sage"
 from backends.base import WorkloadSpec, get_runner, list_backends
+from common.metrics_schema import (
+    UnifiedMetricsRecord,
+    compute_backend_hash,
+    compute_config_hash,
+)
+from common.result_writer import append_jsonl_record, export_jsonl_to_csv
 
 
 class DataSource(SourceFunction):
@@ -96,6 +104,45 @@ class ResultSink(SinkFunction):
     @classmethod
     def result_count(cls) -> int:
         return len(cls._all_results)
+
+
+def build_unified_record(
+    *,
+    backend: str,
+    scheduler_name: str,
+    elapsed_time: float,
+    results_count: int,
+    raw_metrics: dict,
+    workload: str,
+    run_id: str,
+    seed: int,
+    nodes: int,
+    parallelism: int,
+    config_payload: dict,
+) -> UnifiedMetricsRecord:
+    """Build a unified metrics record from backend run output."""
+    throughput = results_count / elapsed_time if elapsed_time > 0 else None
+    return UnifiedMetricsRecord(
+        backend=backend,
+        workload=workload,
+        run_id=run_id,
+        seed=seed,
+        nodes=nodes,
+        parallelism=parallelism,
+        throughput=throughput,
+        latency_p50=raw_metrics.get("latency_p50"),
+        latency_p95=raw_metrics.get("latency_p95"),
+        latency_p99=raw_metrics.get("latency_p99"),
+        success_rate=raw_metrics.get("success_rate"),
+        duration_seconds=elapsed_time,
+        config_hash=compute_config_hash(config_payload),
+        backend_hash=compute_backend_hash(backend),
+        metadata={
+            "scheduler_name": scheduler_name,
+            "results_count": results_count,
+            "raw_metrics": raw_metrics,
+        },
+    )
 
 
 def run_with_scheduler(scheduler, env_class, scheduler_name):
@@ -232,6 +279,36 @@ def main():
         default=2,
         help="处理算子的并行度（默认: 2）",
     )
+    parser.add_argument(
+        "--nodes",
+        type=int,
+        default=1,
+        help="用于记录对比元数据的节点数（默认: 1）",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="用于记录对比元数据的随机种子（默认: 42）",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="results/scheduler_comparison",
+        help="统一结果输出目录（默认: results/scheduler_comparison）",
+    )
+    parser.add_argument(
+        "--run-id",
+        type=str,
+        default="",
+        help="可选运行 ID；为空时自动生成。",
+    )
+    parser.add_argument(
+        "--workload",
+        type=str,
+        default="scheduler_comparison",
+        help="工作负载标识（默认: scheduler_comparison）。",
+    )
     args = parser.parse_args()
 
     print(
@@ -272,6 +349,38 @@ def main():
     print(f"{'=' * 60}")
     print(result.summary())
     print(f"{'=' * 60}\n")
+
+    config_payload = {
+        "backend": args.backend,
+        "scheduler": args.scheduler,
+        "items": args.items,
+        "parallelism": args.parallelism,
+        "nodes": args.nodes,
+        "seed": args.seed,
+        "workload": args.workload,
+    }
+    run_id = args.run_id.strip() or f"{args.backend}-{uuid.uuid4().hex[:12]}"
+    unified_record = build_unified_record(
+        backend=result.backend,
+        scheduler_name=result.scheduler_name,
+        elapsed_time=result.elapsed_time,
+        results_count=result.results_count,
+        raw_metrics=result.metrics,
+        workload=args.workload,
+        run_id=run_id,
+        seed=args.seed,
+        nodes=args.nodes,
+        parallelism=args.parallelism,
+        config_payload=config_payload,
+    )
+
+    output_dir = Path(args.output_dir)
+    jsonl_path = output_dir / "unified_results.jsonl"
+    csv_path = output_dir / "unified_results.csv"
+    append_jsonl_record(jsonl_path, unified_record.to_dict())
+    export_jsonl_to_csv(jsonl_path, csv_path)
+    print(f"📦 Unified JSONL: {jsonl_path}")
+    print(f"📦 Unified CSV:   {csv_path}\n")
 
     results = [result]
 

@@ -11,6 +11,7 @@ Provides common infrastructure for:
 import json
 import random
 import time
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -19,6 +20,15 @@ from pathlib import Path
 import numpy as np
 
 from sage.benchmark.benchmark_sage.experiments.common import RequestResult
+from sage.benchmark.benchmark_sage.experiments.common.metrics_schema import (
+    UnifiedMetricsRecord,
+    compute_backend_hash,
+    compute_config_hash,
+)
+from sage.benchmark.benchmark_sage.experiments.common.result_writer import (
+    append_jsonl_record,
+    export_jsonl_to_csv,
+)
 from sage.benchmark.benchmark_sage.experiments.config import ExperimentConfig
 from sage.benchmark.benchmark_sage.experiments.plotting import Plotter
 
@@ -77,6 +87,12 @@ class BaseExperiment(ABC):
         self.results: list[RequestResult] = []
         self.start_time: float | None = None
         self.end_time: float | None = None
+
+        # Unified cross-backend metadata (can be overridden by entrypoints)
+        self.backend: str = "sage"
+        self.nodes: int = 1
+        self.parallelism: int = 2
+        self.run_id: str = ""
 
         # Random seed for reproducibility
         random.seed(config.workload.seed)
@@ -242,7 +258,58 @@ class BaseExperiment(ABC):
             with open(latex_path, "w") as f:
                 f.write(self._generate_latex_table(result))
 
+        # Unified schema outputs (Issue #9)
+        self._save_unified_outputs(result)
+
         self.log(f"Results saved to {self.output_dir}")
+
+    def _save_unified_outputs(self, result: ExperimentResult) -> None:
+        """Save one unified metrics record to JSONL and CSV."""
+        total = result.total_requests
+        success_rate = (result.successful_requests / total) if total > 0 else None
+        backend = getattr(self, "backend", "sage")
+        nodes = int(getattr(self, "nodes", 1))
+        parallelism = int(getattr(self, "parallelism", 2))
+        workload = self.config.experiment_section
+        run_id = getattr(self, "run_id", "") or f"{workload}-{uuid.uuid4().hex[:12]}"
+
+        config_payload = {
+            "backend": backend,
+            "workload": workload,
+            "seed": self.config.workload.seed,
+            "nodes": nodes,
+            "parallelism": parallelism,
+            "config": self._config_to_dict(),
+        }
+
+        record = UnifiedMetricsRecord(
+            backend=backend,
+            workload=workload,
+            run_id=run_id,
+            seed=self.config.workload.seed,
+            nodes=nodes,
+            parallelism=parallelism,
+            throughput=result.throughput_rps,
+            latency_p50=result.latency_p50_ms,
+            latency_p95=result.latency_p95_ms,
+            latency_p99=result.latency_p99_ms,
+            success_rate=success_rate,
+            duration_seconds=result.duration_s,
+            timestamp=result.end_time,
+            config_hash=compute_config_hash(config_payload),
+            backend_hash=compute_backend_hash(backend),
+            metadata={
+                "experiment_name": result.experiment_name,
+                "total_requests": result.total_requests,
+                "successful_requests": result.successful_requests,
+                "failed_requests": result.failed_requests,
+            },
+        )
+
+        jsonl_path = self.output_dir / "unified_results.jsonl"
+        csv_path = self.output_dir / "unified_results.csv"
+        append_jsonl_record(jsonl_path, record.to_dict())
+        export_jsonl_to_csv(jsonl_path, csv_path)
 
     def _generate_plots(self, result: ExperimentResult) -> None:
         """Generate visualization plots."""

@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import random
 import time
+import uuid
 
 from sage.benchmark.benchmark_sage.experiments.base_experiment import (
     BaseExperiment,
@@ -217,6 +218,10 @@ def main() -> None:  # pragma: no cover
             output_dir=rep_output,
             verbose=args.verbose,
         )
+        experiment.backend = args.backend
+        experiment.nodes = int(args.nodes)
+        experiment.parallelism = int(args.parallelism)
+        experiment.run_id = f"q1-{args.backend}-{rep}-{uuid.uuid4().hex[:8]}"
         experiment.setup()
         experiment.run()
         experiment.teardown()

@@ -52,11 +52,24 @@ from .cli_args import (
     validate_benchmark_args,
     build_run_config,
 )
+from .metrics_schema import (
+    REQUIRED_FIELDS,
+    UnifiedMetricsRecord,
+    compute_backend_hash,
+    compute_config_hash,
+    normalize_metrics_record,
+    utc_timestamp,
+)
 from .pipeline import SchedulingBenchmarkPipeline, register_fiqa_vdb_service
 from .request_utils import (
     BenchmarkClient,
     RequestResult,
     WorkloadGenerator,
+)
+from .result_writer import (
+    CSV_FIELD_ORDER,
+    append_jsonl_record,
+    export_jsonl_to_csv,
 )
 
 __all__ = [
@@ -66,6 +79,15 @@ __all__ = [
     "add_common_benchmark_args",
     "validate_benchmark_args",
     "build_run_config",
+    "REQUIRED_FIELDS",
+    "UnifiedMetricsRecord",
+    "compute_backend_hash",
+    "compute_config_hash",
+    "normalize_metrics_record",
+    "utc_timestamp",
+    "CSV_FIELD_ORDER",
+    "append_jsonl_record",
+    "export_jsonl_to_csv",
     # models - general
     "BenchmarkConfig",
     "BenchmarkMetrics",
