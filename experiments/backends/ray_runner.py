@@ -64,28 +64,6 @@ def _ray_available() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Worker functions (must be module-level for Ray pickling)
-# ---------------------------------------------------------------------------
-
-
-def _process_item(item: str, sleep_s: float = 0.01) -> str:
-    """Simulate light CPU work; mirrors the SAGE ``_Processor`` operator."""
-    import time as _time
-
-    _time.sleep(sleep_s)
-    return f"processed_{item}"
-
-
-def _filter_item(item: str) -> str | None:
-    """Pass only even-indexed items; mirrors the SAGE ``_Filter`` operator."""
-    try:
-        idx = int(item.rsplit("_", 1)[-1])
-        return item if idx % 2 == 0 else None
-    except (ValueError, IndexError):
-        return item  # unknown format → pass through
-
-
-# ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
 
@@ -109,11 +87,15 @@ class RayRunner(WorkloadRunner):
     * Ray is initialised lazily inside :meth:`run`; the local process acts as
       the driver.  The cluster / local-mode choice is inferred automatically
       by Ray.
+    * Worker functions are decorated inside :meth:`run` so they are serialised
+      by cloudpickle (function body) rather than by module reference, which
+      means they work correctly in local mode without any extra ``PYTHONPATH``
+      configuration on the worker.
 
     Extra knobs (``WorkloadSpec.extra``)
     --------------------------------------
-    - ``ray_address``  (str, default ``"auto"`` or local): Ray cluster address.
-      Set to ``None`` to force local mode.
+    - ``ray_address``  (str, default ``None``): Ray cluster address.
+      Leave unset to force local mode.
     - ``num_cpus_per_task`` (float, default ``0.5``): CPU resource per task.
     - ``ray_ignore_reinit_error`` (bool, default ``True``): whether to ignore
       a second ``ray.init`` call in the same process.
@@ -169,10 +151,25 @@ class RayRunner(WorkloadRunner):
             ray.init(**init_kwargs)
 
         # ------------------------------------------------------------------
-        # Register remote functions with the requested resource hint
+        # Define worker functions inline so Ray serialises their bodies via
+        # cloudpickle rather than looking them up by module path on workers.
+        # This avoids "No module named 'backends'" errors in local mode.
         # ------------------------------------------------------------------
-        process_remote = ray.remote(num_cpus=num_cpus_per_task)(_process_item)
-        filter_remote = ray.remote(num_cpus=num_cpus_per_task)(_filter_item)
+        _sleep = sleep_per_item  # captured by closure
+
+        @ray.remote(num_cpus=num_cpus_per_task)
+        def _process(item: str) -> str:
+            import time as _time
+            _time.sleep(_sleep)
+            return f"processed_{item}"
+
+        @ray.remote(num_cpus=num_cpus_per_task)
+        def _filter(item: str) -> str | None:
+            try:
+                idx = int(item.rsplit("_", 1)[-1])
+                return item if idx % 2 == 0 else None
+            except (ValueError, IndexError):
+                return item
 
         # ------------------------------------------------------------------
         # Source: generate item tokens (mirrors SAGE _Source output)
@@ -194,19 +191,13 @@ class RayRunner(WorkloadRunner):
             batch = items[batch_start : batch_start + batch_size]
 
             # Stage 1: process
-            process_refs = [
-                process_remote.remote(item, sleep_per_item)
-                for item in batch
-            ]
-            processed = ray.get(process_refs)
+            process_refs = [_process.remote(item) for item in batch]
+            processed: list[str] = ray.get(process_refs)
             tasks_submitted += len(process_refs)
 
             # Stage 2: filter
-            filter_refs = [
-                filter_remote.remote(p_item)
-                for p_item in processed
-            ]
-            filtered = ray.get(filter_refs)
+            filter_refs = [_filter.remote(p_item) for p_item in processed]
+            filtered: list[str | None] = ray.get(filter_refs)
             tasks_submitted += len(filter_refs)
 
             # Sink: collect non-None results
