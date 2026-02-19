@@ -34,6 +34,8 @@ Adaptive-RAG SAGE 数据流 Pipeline 实现
 from __future__ import annotations
 
 import json
+import os
+import sys
 import tempfile
 import time
 from dataclasses import dataclass, field
@@ -52,12 +54,29 @@ from sage.common.core import (
 )
 from sage.kernel.api import LocalEnvironment
 
-# 本地分类器导入
-from .classifier import (
-    ClassificationResult,
-    QueryComplexityLevel,
-    create_classifier,
-)
+# 本地分类器导入（支持脚本直接运行和模块运行）
+if __package__ in (None, ""):
+    current_dir = Path(__file__).resolve().parent
+    if str(current_dir) not in sys.path:
+        sys.path.insert(0, str(current_dir))
+
+    experiments_dir = current_dir.parent.parent
+    if str(experiments_dir) not in sys.path:
+        sys.path.insert(0, str(experiments_dir))
+
+    from classifier import (
+        ClassificationResult,
+        QueryComplexityLevel,
+        create_classifier,
+    )
+    from common.execution_guard import run_pipeline_bounded
+else:
+    from .classifier import (
+        ClassificationResult,
+        QueryComplexityLevel,
+        create_classifier,
+    )
+    from ...common.execution_guard import run_pipeline_bounded
 
 # ============================================================================
 # 数据结构定义
@@ -200,7 +219,10 @@ class ClassifierMapFunction(MapFunction):
 
     def setup(self):
         """初始化分类器"""
-        self._classifier = create_classifier(self.classifier_type, llm_client=self.llm_client)
+        if self.classifier_type == "llm":
+            self._classifier = create_classifier(self.classifier_type, llm_client=self.llm_client)
+        else:
+            self._classifier = create_classifier(self.classifier_type)
         self.logger.info(
             f"ClassifierMapFunction: initialized with {self.classifier_type} classifier"
         )
@@ -665,6 +687,9 @@ def build_adaptive_rag_pipeline(
 
 def main():
     """演示 Adaptive-RAG SAGE 数据流 Pipeline"""
+    timeout_seconds = float(os.getenv("ADAPTIVE_RAG_TIMEOUT_SECONDS", "30"))
+    poll_interval_seconds = float(os.getenv("ADAPTIVE_RAG_POLL_SECONDS", "0.2"))
+
     print("=" * 70)
     print("Adaptive-RAG SAGE 数据流 Pipeline 演示")
     print("=" * 70)
@@ -695,8 +720,13 @@ def main():
 
     # 执行
     try:
-        env.submit(autostop=True)
-        time.sleep(2)  # 等待处理完成
+        guard_result = run_pipeline_bounded(
+            env,
+            timeout_seconds=timeout_seconds,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+        if guard_result.timed_out:
+            print(f"⚠️ Execution timed out after {timeout_seconds:.1f}s and was stopped.")
     finally:
         env.close()
 

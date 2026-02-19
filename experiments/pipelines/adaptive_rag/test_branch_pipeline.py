@@ -11,13 +11,25 @@ This demonstrates SAGE's Multi-Branch Pipeline pattern:
 
 import os
 import time
+from pathlib import Path
+import sys
 
 os.environ["SAGE_LOG_LEVEL"] = "ERROR"
 
 # Import classifier
-from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag.classifier import (
-    create_classifier,
-)
+if __package__ in (None, ""):
+    current_dir = Path(__file__).resolve().parent
+    if str(current_dir) not in sys.path:
+        sys.path.insert(0, str(current_dir))
+    from classifier import create_classifier
+
+    experiments_dir = current_dir.parent.parent
+    if str(experiments_dir) not in sys.path:
+        sys.path.insert(0, str(experiments_dir))
+    from common.execution_guard import run_pipeline_bounded
+else:
+    from .classifier import create_classifier
+    from ...common.execution_guard import run_pipeline_bounded
 from sage.common.core import FilterFunction, MapFunction, SinkFunction, SourceFunction
 from sage.kernel.api import LocalEnvironment
 
@@ -163,6 +175,9 @@ class ResultSink(SinkFunction):
 
 
 def main():
+    timeout_seconds = float(os.getenv("ADAPTIVE_RAG_TIMEOUT_SECONDS", "30"))
+    poll_interval_seconds = float(os.getenv("ADAPTIVE_RAG_POLL_SECONDS", "0.2"))
+
     print("=" * 70)
     print("Testing Multi-Branch Adaptive-RAG Pipeline")
     print("=" * 70)
@@ -215,8 +230,13 @@ def main():
     print()
 
     try:
-        env.submit(autostop=True)
-        time.sleep(5)
+        guard_result = run_pipeline_bounded(
+            env,
+            timeout_seconds=timeout_seconds,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+        if guard_result.timed_out:
+            print(f"⚠️ Execution timed out after {timeout_seconds:.1f}s and was stopped.")
     except Exception as e:
         print(f"Execution error: {e}")
     finally:
