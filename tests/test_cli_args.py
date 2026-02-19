@@ -11,6 +11,7 @@ Verifies that:
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 import pytest
 
@@ -183,6 +184,23 @@ class TestValidation:
         with pytest.raises(SystemExit):
             validate_benchmark_args(args)
 
+    def test_repeat_error_message_is_actionable(self, capsys):
+        args = _parse(_make_parser(), ["--repeat", "0"])
+        with pytest.raises(SystemExit):
+            validate_benchmark_args(args)
+        err = capsys.readouterr().err
+        assert "argument validation failed" in err
+        assert "--repeat must be" in err
+
+    def test_ray_missing_dependency_error_is_actionable(self, monkeypatch, capsys):
+        monkeypatch.setattr("common.cli_args._module_available", lambda _name: False)
+        args = _parse(_make_parser(), ["--backend", "ray"])
+        with pytest.raises(SystemExit):
+            validate_benchmark_args(args)
+        err = capsys.readouterr().err
+        assert "Ray backend selected" in err
+        assert "python -m pip install -e .[ray-baseline]" in err
+
 
 # ---------------------------------------------------------------------------
 # build_run_config
@@ -264,3 +282,17 @@ class TestParserOptions:
         add_common_benchmark_args(p, include_dry_run=False)
         with pytest.raises(SystemExit):
             p.parse_args(["--dry-run"])
+
+
+class TestEntryPointParity:
+    """Suite + migrated workload should both consume the shared helper."""
+
+    def test_suite_entrypoint_uses_shared_helper(self):
+        suite_main = Path(__file__).resolve().parents[1] / "__main__.py"
+        content = suite_main.read_text(encoding="utf-8")
+        assert "add_common_benchmark_args(parser" in content
+
+    def test_q1_entrypoint_uses_shared_helper(self):
+        q1_entry = Path(__file__).resolve().parents[1] / "experiments" / "q1_pipelinechain.py"
+        content = q1_entry.read_text(encoding="utf-8")
+        assert "add_common_benchmark_args(parser" in content
