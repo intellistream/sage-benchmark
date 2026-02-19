@@ -164,3 +164,13 @@ python experiments/distributed_workloads/run_workload4.py \
 At the repo root, `docs/icml-prompts/` contains reusable writing prompts. You can either reference
 them directly or copy customized versions into this folder when preparing a specific ICML
 submission.
+
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/BACKEND_COMPARISON_GUIDE.md](docs/BACKEND_COMPARISON_GUIDE.md) | **End-to-end guide**: installation → single run → paired comparison → report generation. Covers reproducibility controls, unified metrics schema, and the architecture decision to keep Ray out of SAGE core. |
+| [docs/backend-abstraction.md](docs/backend-abstraction.md) | Backend runner ABC, registry pattern, `WorkloadRunner` interface, and how to add a new backend. |
+| [docs/compare_backends.md](docs/compare_backends.md) | `compare_backends.py` CLI reference: flags, input formats, generated artifacts, config mismatch detection. |
+| [docs/WORKLOAD_DESIGNS.md](docs/WORKLOAD_DESIGNS.md) | Workload family descriptions and design rationale. |
