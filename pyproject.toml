@@ -20,7 +20,7 @@ build-backend = "setuptools.build_meta"
 # ----------------------------------------------------------------------------
 [project]
 name = "isage-sage-benchmark"
-version = "0.1.0.3"  # 静态版本，避免动态导入问题
+version = "0.1.0.4"  # 静态版本，避免动态导入问题
 description = "SAGE Benchmark - SAGE framework-specific system-level benchmarks"
 readme = "README.md"
 requires-python = ">=3.10"
