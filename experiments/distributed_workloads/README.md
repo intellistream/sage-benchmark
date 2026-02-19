@@ -70,6 +70,72 @@ python -m distributed_workloads.workload_runner scenario scenario_3_high
 python -m distributed_workloads.workload_runner all
 ```
 
+---
+
+## ⚡ Ray 基线后端（Workload4）
+
+`run_workload4.py` 支持通过 `--backend` 参数在 **SAGE**（默认）和 **Ray** 之间切换，
+实现同等业务逻辑下的并排对比。
+
+### 安装 Ray（可选）
+
+```bash
+pip install "ray[default]>=2.9"
+```
+
+> 如未安装 Ray，`--backend sage` 仍可正常使用；切换到 `--backend ray` 时会打印
+> 清晰的安装提示并退出，**不会崩溃**。
+
+### 运行示例
+
+```bash
+# SAGE 后端（默认）
+python run_workload4.py --backend sage --num-tasks 50 --debug
+
+# Ray 后端（本地模式）
+python run_workload4.py --backend ray  --num-tasks 50 --debug
+
+# Ray 后端 + 连接远端集群
+python run_workload4.py --backend ray --num-tasks 200 \
+    --ray-address "ray://my-cluster:10001" \
+    --ray-parallelism 8
+
+# Dry run：仅打印配置，不执行
+python run_workload4.py --backend ray --dry-run
+```
+
+### 对比输出示例
+
+两种后端均输出统一格式的结果摘要（`RunResult.summary()`）：
+
+```
+================================================================================
+Ray Backend - Workload4 Result
+================================================================================
+Backend     : ray
+Scheduler   : load_aware
+Elapsed (s) : 1.234
+Output items: 25
+Metrics:
+  tasks_submitted: 100
+  tasks_succeeded: 25
+  items_filtered_out: 25
+  ray_nodes: 1
+Wall clock (s): 1.240
+================================================================================
+```
+
+Ray 后端的结果文件保存在 `--output-dir` 下的 `ray_backend_result.txt`，
+可与 SAGE 后端的 CSV 指标文件直接对比。
+
+### 实现位置
+
+| 文件 | 说明 |
+|------|------|
+| `experiments/backends/ray_runner.py` | Ray MVP Runner（`@register_runner("ray")`）|
+| `experiments/backends/base.py` | `WorkloadRunner` ABC + 注册表 |
+| `experiments/distributed_workloads/run_workload4.py` | CLI 入口（`--backend ray\|sage`）|
+
 ## 🔧 配置说明
 
 ### 统一配置类 (`WorkloadConfig`)
