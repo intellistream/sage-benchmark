@@ -62,6 +62,19 @@ python -m sage.benchmark.benchmark_sage --experiment Q4 \
 python -m sage.benchmark.benchmark_sage --experiment Q2 --dry-run
 ```
 
+## Installation Profiles
+
+```bash
+# Default usage (no Ray dependency)
+python -m pip install -e .
+
+# Optional: enable Ray baseline backend
+python -m pip install -e .[ray-baseline]
+```
+
+- Default installs do not require Ray and are unaffected.
+- Use `--backend ray` only after installing the `ray-baseline` extra.
+
 ### Standardised CLI flags (Issue #2)
 
 All workload entry points share the same flag contract so backend comparison runs always

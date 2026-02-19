@@ -467,7 +467,8 @@ def _run_ray_backend(args: argparse.Namespace, config: Workload4Config) -> int:
         logging.error(str(exc))
         logging.error(
             "Ray 安装指南:\n"
-            '    pip install "ray[default]>=2.9"\n'
+            "    python -m pip install -e .[ray-baseline]\n"
+            '    python -m pip install "ray[default]>=2.9"\n'
             "安装完成后重新运行: python run_workload4.py --backend ray"
         )
         return 1

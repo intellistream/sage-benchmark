@@ -159,18 +159,29 @@ class TestValidation:
         with pytest.raises(SystemExit):
             validate_benchmark_args(args)
 
-    def test_nodes_1_with_any_backend_ok(self):
-        for backend in SUPPORTED_BACKENDS:
-            args = _parse(_make_parser(), ["--backend", backend, "--nodes", "1"])
-            validate_benchmark_args(args)  # no raise
+    def test_nodes_1_with_sage_ok(self):
+        args = _parse(_make_parser(), ["--backend", "sage", "--nodes", "1"])
+        validate_benchmark_args(args)  # no raise
+
+    def test_nodes_1_with_ray_ok_when_ray_installed(self, monkeypatch):
+        monkeypatch.setattr("common.cli_args._module_available", lambda _name: True)
+        args = _parse(_make_parser(), ["--backend", "ray", "--nodes", "1"])
+        validate_benchmark_args(args)  # no raise
 
     def test_nodes_multi_with_sage_ok(self):
         args = _parse(_make_parser(), ["--backend", "sage", "--nodes", "4"])
         validate_benchmark_args(args)  # sage supports distributed; no raise
 
-    def test_nodes_multi_with_ray_ok(self):
+    def test_nodes_multi_with_ray_ok_when_ray_installed(self, monkeypatch):
+        monkeypatch.setattr("common.cli_args._module_available", lambda _name: True)
         args = _parse(_make_parser(), ["--backend", "ray", "--nodes", "4"])
         validate_benchmark_args(args)  # ray supports distributed; no raise
+
+    def test_ray_backend_missing_dependency_rejected(self, monkeypatch):
+        monkeypatch.setattr("common.cli_args._module_available", lambda _name: False)
+        args = _parse(_make_parser(), ["--backend", "ray"])
+        with pytest.raises(SystemExit):
+            validate_benchmark_args(args)
 
 
 # ---------------------------------------------------------------------------

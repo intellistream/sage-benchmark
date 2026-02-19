@@ -96,6 +96,11 @@ pipeline = [
     "scikit-learn>=1.3.0",              # 机器学习工具
 ]
 
+# Ray 基线后端依赖（可选）
+ray-baseline = [
+    "ray[default]>=2.9,<3.0",           # Ray baseline runtime (optional)
+]
+
 # 开发和测试依赖
 dev = [
     "pytest>=7.0.0",                    # 测试框架
@@ -107,7 +112,7 @@ dev = [
 
 # 完整安装（所有功能）
 all = [
-    "isage-sage-benchmark[control-plane,pipeline,dev]",
+    "isage-sage-benchmark[control-plane,pipeline,ray-baseline,dev]",
 ]
 
 # ----------------------------------------------------------------------------

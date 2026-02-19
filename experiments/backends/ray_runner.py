@@ -18,7 +18,7 @@ Scope
 
 Install guidance (when Ray is missing)
 ---------------------------------------
-    pip install "ray[default]>=2.9"
+    python -m pip install -e .[ray-baseline]
 
 Usage
 -----
@@ -48,7 +48,9 @@ _RAY_MIN_VERSION = "2.9"
 
 _RAY_INSTALL_HINT = (
     "Ray is not installed.  Install it with:\n"
-    f'    pip install "ray[default]>={_RAY_MIN_VERSION}"\n'
+    "    python -m pip install -e .[ray-baseline]\n"
+    "Or install Ray directly with:\n"
+    f'    python -m pip install "ray[default]>={_RAY_MIN_VERSION}"\n'
     "Then re-run with --backend ray."
 )
 

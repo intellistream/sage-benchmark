@@ -80,7 +80,11 @@ python -m distributed_workloads.workload_runner all
 ### 安装 Ray（可选）
 
 ```bash
-pip install "ray[default]>=2.9"
+# 在仓库根目录安装 Ray 基线可选依赖（推荐）
+python -m pip install -e .[ray-baseline]
+
+# 或仅安装 Ray（不使用 extra）
+python -m pip install "ray[default]>=2.9"
 ```
 
 > 如未安装 Ray，`--backend sage` 仍可正常使用；切换到 `--backend ray` 时会打印

@@ -44,6 +44,7 @@ Usage example
 from __future__ import annotations
 
 import argparse
+import importlib.util
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -52,6 +53,13 @@ from typing import Any
 
 SUPPORTED_BACKENDS: tuple[str, ...] = ("sage", "ray")
 DEFAULT_BACKEND: str = "sage"
+
+RAY_BASELINE_INSTALL_CMD = "python -m pip install -e .[ray-baseline]"
+
+
+def _module_available(module_name: str) -> bool:
+    """Return True when *module_name* can be imported by Python."""
+    return importlib.util.find_spec(module_name) is not None
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +237,14 @@ def validate_benchmark_args(args: argparse.Namespace) -> None:
     seed: int = getattr(args, "seed", 42)
     if seed < 0:
         errors.append(f"--seed must be ≥ 0; got {seed}.")
+
+    # Optional backend dependency guard (fail fast with actionable guidance)
+    if backend == "ray" and not _module_available("ray"):
+        errors.append(
+            "Ray backend selected but 'ray' is not installed. "
+            "From the repository root run: "
+            f"{RAY_BASELINE_INSTALL_CMD}"
+        )
 
     if errors:
         # Use argparse-style messaging so users get a consistent look
