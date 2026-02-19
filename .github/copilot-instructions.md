@@ -1,5 +1,11 @@
 # sage-benchmark - GitHub Copilot Instructions
 
+## 🚨 Runtime Direction (Cross-Repo)
+
+- `sageFlownet` is the runtime component that replaces `Ray` in the SAGE ecosystem.
+- Benchmark code for scheduling/distributed execution should align with Flownet runtime usage.
+- Do NOT add new `ray` imports/dependencies.
+
 ## Project Overview
 
 **sage-benchmark** is SAGE framework-specific system-level benchmarking repository, focused on end-to-end experiments and performance validation of the SAGE platform.
