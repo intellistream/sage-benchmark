@@ -1,0 +1,70 @@
+name: Paired Backend Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      scheduler:
+        description: "Scheduler name"
+        required: false
+        default: "fifo"
+        type: choice
+        options:
+          - fifo
+          - load_aware
+          - default
+      items:
+        description: "Total items"
+        required: false
+        default: "10"
+      parallelism:
+        description: "Operator parallelism"
+        required: false
+        default: "2"
+      nodes:
+        description: "Node count metadata"
+        required: false
+        default: "1"
+      seed:
+        description: "Global seed"
+        required: false
+        default: "42"
+      run_id:
+        description: "Optional explicit run_id"
+        required: false
+        default: ""
+
+jobs:
+  paired-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install benchmark package with ray baseline
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[ray-baseline]
+
+      - name: Run paired backend benchmark
+        run: |
+          python experiments/analysis/run_paired_backends.py \
+            --scheduler "${{ github.event.inputs.scheduler }}" \
+            --items "${{ github.event.inputs.items }}" \
+            --parallelism "${{ github.event.inputs.parallelism }}" \
+            --nodes "${{ github.event.inputs.nodes }}" \
+            --seed "${{ github.event.inputs.seed }}" \
+            --run-id "${{ github.event.inputs.run_id }}"
+
+      - name: Upload paired-run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paired-backend-run-${{ github.run_id }}
+          path: artifacts/paired_backend_runs
+          if-no-files-found: warn

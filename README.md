@@ -62,6 +62,37 @@ python -m sage.benchmark.benchmark_sage --experiment Q4 \
 python -m sage.benchmark.benchmark_sage --experiment Q2 --dry-run
 ```
 
+## Paired backend automation (Issue #7)
+
+Use one command to launch paired `sage` + `ray` runs, archive artifacts with
+`run_id` and `config_hash`, and generate unified comparison outputs:
+
+```bash
+python experiments/analysis/run_paired_backends.py \
+  --scheduler fifo \
+  --items 10 \
+  --parallelism 2 \
+  --nodes 1 \
+  --seed 42
+```
+
+Artifacts are written under:
+
+```text
+artifacts/paired_backend_runs/run_id=<...>/config_hash=<...>/
+```
+
+With this structure:
+
+- `backends/sage/` and `backends/ray/`: raw unified metrics (`unified_results.jsonl/csv`)
+- `comparison/`: summary report and merged comparison CSV
+- `logs/`: per-step actionable logs (`sage.log`, `ray.log`, `compare.log`)
+- `manifest.json`: run metadata for reproducibility
+
+Manual GitHub Actions trigger is available in:
+
+- `.github/workflows/paired-backend-run.yml`
+
 ## Installation Profiles
 
 ```bash
