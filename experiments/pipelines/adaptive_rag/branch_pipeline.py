@@ -36,8 +36,8 @@ from sage.common.core import (
     SinkFunction,
     SourceFunction,
 )
+from sage.kernel.api import FlownetEnvironment
 from sage.kernel.api import LocalEnvironment
-from sage.kernel.api.remote_environment import RemoteEnvironment
 
 # 支持直接运行和模块运行两种方式
 try:
@@ -706,13 +706,13 @@ class ResultSink(SinkFunction):
 
 
 def build_branching_adaptive_rag_pipeline(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     queries: list[str],
     classifier_type: str = "rule",
     llm_base_url: str = "http://11.11.11.7:8903/v1",
     llm_model: str = "Qwen/Qwen2.5-7B-Instruct",
     max_iterations: int = 3,
-) -> LocalEnvironment | RemoteEnvironment:
+) -> LocalEnvironment | FlownetEnvironment:
     """
     构建流分支模式的 Adaptive-RAG Pipeline
 
@@ -733,7 +733,7 @@ def build_branching_adaptive_rag_pipeline(
     ```
 
     Args:
-        env: SAGE LocalEnvironment 或 RemoteEnvironment
+        env: SAGE LocalEnvironment 或 FlownetEnvironment
         queries: 查询列表
         classifier_type: 分类器类型
         llm_base_url: LLM 服务地址
@@ -834,9 +834,9 @@ def main():
 
     # 根据模式创建环境
     if use_remote:
-        env = RemoteEnvironment(
+        env = FlownetEnvironment(
             name="adaptive-rag-branch",
-            host="sage-node-1",  # Ray head node
+            config={"flownet": {"head_node": "sage-node-1"}},
         )
     else:
         env = LocalEnvironment(name="adaptive-rag-branch")

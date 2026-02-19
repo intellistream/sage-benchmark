@@ -1,7 +1,7 @@
 """
 Workload 4 Service Implementations
 
-所有 Service classes 放在独立模块中，避免 Ray 序列化问题。
+所有 Service classes 放在独立模块中，避免分布式序列化问题。
 """
 
 print("[services.py] Module imported successfully - verifying Service extraction")  # 验证

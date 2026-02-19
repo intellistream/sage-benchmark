@@ -48,8 +48,8 @@ from sage.common.core import (
     SinkFunction,
     SourceFunction,
 )
+from sage.kernel.api import FlownetEnvironment
 from sage.kernel.api import LocalEnvironment
-from sage.kernel.api.remote_environment import RemoteEnvironment
 
 # 支持直接运行和模块运行
 try:
@@ -606,13 +606,13 @@ class QuerySource(SourceFunction):
 
 
 def build_modular_pipeline(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     queries: list[str],
     classifier_type: str = "rule",
     llm_base_url: str = "http://11.11.11.7:8903/v1",
     llm_model: str = "Qwen/Qwen2.5-7B-Instruct",
     max_iterations: int = 3,
-) -> LocalEnvironment | RemoteEnvironment:
+) -> LocalEnvironment | FlownetEnvironment:
     """
     构建模块化 Adaptive-RAG Pipeline
 
@@ -722,13 +722,13 @@ def main():
     ]
 
     # 选择运行模式
-    use_remote = False  # 设为 True 使用 Ray 集群
+    use_remote = False  # 设为 True 使用 Flownet 集群
 
     if use_remote:
-        print("\n🔧 Using RemoteEnvironment (Ray Cluster)")
-        env = RemoteEnvironment(
+        print("\n🔧 Using RemoteEnvironment (Flownet Cluster)")
+        env = FlownetEnvironment(
             "modular-adaptive-rag",
-            ray_address="ray://sage-node-1:10001",
+            config={"flownet": {"address": "flownet://sage-node-1"}},
         )
     else:
         print("\n🔧 Using LocalEnvironment")

@@ -30,7 +30,7 @@ from sage.common.core import (
     SinkFunction,
     SourceFunction,
 )
-from sage.kernel.api import RemoteEnvironment
+from sage.kernel.api import FlownetEnvironment
 
 try:
     from .scheduler import HeadNodeScheduler
@@ -457,16 +457,20 @@ class RAGPipeline:
 
     def __init__(self, config: RAGConfig):
         self.config = config
-        self.env: Optional[RemoteEnvironment] = None
+        self.env: Optional[FlownetEnvironment] = None
 
-    def build(self) -> RemoteEnvironment:
+    def build(self) -> FlownetEnvironment:
         """构建 RAG Pipeline"""
         scheduler = HeadNodeScheduler()
 
-        self.env = RemoteEnvironment(
+        self.env = FlownetEnvironment(
             "rag_pipeline",
-            host=self.config.job_manager_host,
-            port=self.config.job_manager_port,
+            config={
+                "flownet": {
+                    "job_manager_host": self.config.job_manager_host,
+                    "job_manager_port": self.config.job_manager_port,
+                }
+            },
             scheduler=scheduler,
         )
 

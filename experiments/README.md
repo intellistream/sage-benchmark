@@ -26,7 +26,7 @@ distributed_scheduling/
 
 ## 前置条件
 
-1. **启动 Ray 集群** (多节点实验需要):
+1. **启动 Flownet 集群** (多节点实验需要):
 
    ```bash
    # 编辑 config/cluster.yaml 配置节点

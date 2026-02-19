@@ -3,16 +3,32 @@
 调度器对比示例
 演示如何使用不同的调度策略并对比性能指标
 
+支持通过 --backend 选择运行后端（默认 sage），保持工作负载逻辑后端无关。
+
+使用示例::
+
+    python experiments/scheduler_comparison.py
+    python experiments/scheduler_comparison.py --backend sage --scheduler fifo --items 10
+
 @test:timeout=90
 @test:category=scheduler
 """
 
+import argparse
 import time
 
 from sage.common.core import MapFunction, SinkFunction, SourceFunction
+from sage.kernel.api import FlownetEnvironment
 from sage.kernel.api.local_environment import LocalEnvironment
-from sage.kernel.api.remote_environment import RemoteEnvironment
 from sage.kernel.scheduler.impl import FIFOScheduler, LoadAwareScheduler
+
+from common.execution_guard import run_pipeline_bounded
+
+# Register available backends (import triggers @register_runner decoration)
+# Use direct 'backends.*' imports – experiments/ is in sys.path when this
+# script is executed directly (Python adds the script's directory).
+import backends.sage_runner  # noqa: F401  registers "sage"
+from backends.base import WorkloadSpec, get_runner, list_backends
 
 
 class DataSource(SourceFunction):
@@ -61,6 +77,8 @@ class LightFilter(MapFunction):
 class ResultSink(SinkFunction):
     """收集结果"""
 
+    _all_results: list[str] = []
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.results = []
@@ -68,7 +86,16 @@ class ResultSink(SinkFunction):
     def execute(self, data):
         if data:
             self.results.append(data)
+            ResultSink._all_results.append(data)
             print(f"💾 Sink: {data}")
+
+    @classmethod
+    def clear_all_results(cls):
+        cls._all_results.clear()
+
+    @classmethod
+    def result_count(cls) -> int:
+        return len(cls._all_results)
 
 
 def run_with_scheduler(scheduler, env_class, scheduler_name):
@@ -79,15 +106,16 @@ def run_with_scheduler(scheduler, env_class, scheduler_name):
 
     env = None
     try:
+        ResultSink.clear_all_results()
+
         # 创建环境并指定调度器
         if env_class == LocalEnvironment:
             env = LocalEnvironment(name=f"scheduler_test_{scheduler_name}", scheduler=scheduler)
         else:
-            env = RemoteEnvironment(name=f"scheduler_test_{scheduler_name}", scheduler=scheduler)
+            env = FlownetEnvironment(name=f"scheduler_test_{scheduler_name}", scheduler=scheduler)
 
         # 构建 pipeline
         # 注意：并行度在 operator 级别指定
-        sink_op = ResultSink()
         (
             env.from_source(DataSource, total_items=10)  # 减少到10个项目以加快测试
             .map(HeavyProcessor, parallelism=2)  # 资源密集型 operator，2 个并行实例
@@ -101,29 +129,17 @@ def run_with_scheduler(scheduler, env_class, scheduler_name):
         # 提交执行
         print(f"▶️  开始执行 pipeline (调度器: {scheduler_name})...\n")
 
-        # 使用简单的超时机制
+        # 使用受控超时，避免执行卡住
         max_wait_time = 30  # 最大等待30秒
         try:
-            # 直接提交，如果超时就进行下一个测试
-            env.submit(autostop=True)
+            guard_result = run_pipeline_bounded(
+                env,
+                timeout_seconds=max_wait_time,
+                poll_interval_seconds=0.2,
+            )
 
-            # 等待一小段时间确保完成
-
-            wait_start = time.time()
-            while time.time() - wait_start < max_wait_time:
-                # 检查是否还有活跃任务
-                if hasattr(env, "is_running"):
-                    is_running_attr = env.is_running
-                    # Check if it's a method or property
-                    if callable(is_running_attr):
-                        if not is_running_attr():
-                            break
-                    elif not is_running_attr:  # It's a boolean property
-                        break
-                time.sleep(0.5)
-
-            if time.time() - wait_start >= max_wait_time:
-                print(f"⚠️  {scheduler_name} 执行可能超时，但继续收集结果")
+            if guard_result.timed_out:
+                print(f"⚠️  {scheduler_name} 执行超时 ({max_wait_time}s)，已停止任务")
 
         except Exception as e:
             print(f"❌ {scheduler_name} 执行出错: {e}")
@@ -150,7 +166,7 @@ def run_with_scheduler(scheduler, env_class, scheduler_name):
         print(f"📊 {scheduler_name} 执行结果")
         print(f"{'=' * 60}")
         print(f"总耗时: {elapsed:.2f} 秒")
-        print(f"处理结果数: {len(sink_op.results) if hasattr(sink_op, 'results') else 'N/A'}")
+        print(f"处理结果数: {ResultSink.result_count()}")
         print("调度器指标:")
         for key, value in metrics.items():
             print(f"  - {key}: {value}")
@@ -160,7 +176,7 @@ def run_with_scheduler(scheduler, env_class, scheduler_name):
             "scheduler": scheduler_name,
             "elapsed_time": elapsed,
             "metrics": metrics,
-            "results_count": len(sink_op.results) if hasattr(sink_op, "results") else 0,
+            "results_count": ResultSink.result_count(),
         }
 
     except Exception as e:
@@ -184,7 +200,39 @@ def run_with_scheduler(scheduler, env_class, scheduler_name):
 
 
 def main():
-    """主函数：对比不同调度策略"""
+    """主函数：对比不同调度策略（支持 --backend 选择运行后端）"""
+
+    # ------------------------------------------------------------------
+    # CLI argument parsing
+    # ------------------------------------------------------------------
+    parser = argparse.ArgumentParser(
+        description="SAGE 调度器对比示例 – 支持多后端运行",
+    )
+    parser.add_argument(
+        "--backend",
+        default="sage",
+        choices=list_backends() or ["sage"],
+        help="选择运行后端（默认: sage）",
+    )
+    parser.add_argument(
+        "--scheduler",
+        default="fifo",
+        choices=["fifo", "load_aware", "default"],
+        help="调度策略（默认: fifo）",
+    )
+    parser.add_argument(
+        "--items",
+        type=int,
+        default=10,
+        help="数据源产生的 item 数量（默认: 10）",
+    )
+    parser.add_argument(
+        "--parallelism",
+        type=int,
+        default=2,
+        help="处理算子的并行度（默认: 2）",
+    )
+    args = parser.parse_args()
 
     print(
         """
@@ -195,32 +243,45 @@ def main():
     """
     )
 
-    # 检测是否在测试模式
+    # ------------------------------------------------------------------
+    # Backend-abstraction path (new)
+    # Runs the workload through the selected backend via WorkloadRunner.
+    # ------------------------------------------------------------------
     import os
 
     test_mode = (
-        os.environ.get("SAGE_EXAMPLES_MODE") == "test" or os.environ.get("SAGE_TEST_MODE") == "true"
+        os.environ.get("SAGE_EXAMPLES_MODE") == "test"
+        or os.environ.get("SAGE_TEST_MODE") == "true"
     )
 
-    results = []
-
-    # 实验 1: FIFO 调度器 (LocalEnvironment)
-    print("\n🧪 实验 1: FIFO 调度器 (Local)")
-    result1 = run_with_scheduler(
-        scheduler=FIFOScheduler(),
-        env_class=LocalEnvironment,
-        scheduler_name="FIFO_Local",
+    spec = WorkloadSpec(
+        name="scheduler_demo",
+        total_items=args.items,
+        parallelism=args.parallelism,
+        scheduler_name=args.scheduler,
     )
-    results.append(result1)
 
-    # 如果在测试模式，只运行一个实验
-    if test_mode:
-        print("\n⚠️  测试模式：只运行一个调度器实验")
-    else:
-        time.sleep(2)  # 等待一下
+    print(f"\n🔧 后端: {args.backend} | 调度器: {args.scheduler} | items: {args.items}")
+    print(f"   可用后端: {', '.join(list_backends())}\n")
 
-        # 实验 2: 负载感知调度器 (LocalEnvironment)
-        print("\n🧪 实验 2: 负载感知调度器 (Local)")
+    runner = get_runner(args.backend)
+    result = runner.run(spec)
+
+    print(f"\n{'=' * 60}")
+    print(f"📊 运行结果 ({args.backend})")
+    print(f"{'=' * 60}")
+    print(result.summary())
+    print(f"{'=' * 60}\n")
+
+    results = [result]
+
+    # ------------------------------------------------------------------
+    # Legacy multi-scheduler comparison (SAGE default path, unchanged)
+    # Only runs in non-test mode to keep CI fast.
+    # ------------------------------------------------------------------
+    if not test_mode and args.backend == "sage":
+        time.sleep(1)
+        print("\n🧪 实验 2: 负载感知调度器 (Local) – 对比组")
         result2 = run_with_scheduler(
             scheduler=LoadAwareScheduler(max_concurrent=10),
             env_class=LocalEnvironment,
@@ -228,47 +289,26 @@ def main():
         )
         results.append(result2)
 
-    # 可选：如果有 Ray 环境，可以测试 RemoteEnvironment
-    # 注意：需要先启动 JobManager daemon
-    try_remote = False  # 设置为 True 以测试 RemoteEnvironment
-
-    if try_remote:
-        time.sleep(2)
-
-        # 实验 3: FIFO 调度器 (RemoteEnvironment)
-        print("\n🧪 实验 3: FIFO 调度器 (Remote)")
-        result3 = run_with_scheduler(
-            scheduler="fifo",  # 也可以使用字符串
-            env_class=RemoteEnvironment,
-            scheduler_name="FIFO_Remote",
-        )
-        results.append(result3)
-
-        time.sleep(2)
-
-        # 实验 4: 负载感知调度器 (RemoteEnvironment)
-        print("\n🧪 实验 4: 负载感知调度器 (Remote)")
-        result4 = run_with_scheduler(
-            scheduler="load_aware",  # 也可以使用字符串
-            env_class=RemoteEnvironment,
-            scheduler_name="LoadAware_Remote",
-        )
-        results.append(result4)
-
-    # 打印对比总结
+    # ------------------------------------------------------------------
+    # Summary
+    # ------------------------------------------------------------------
     print("\n" + "=" * 80)
     print("📈 调度器性能对比总结")
     print("=" * 80)
 
-    for result in results:
-        print(f"\n{result['scheduler']}:")
-        print(f"  总耗时: {result['elapsed_time']:.2f} 秒")
-        print(f"  调度策略: {result['metrics'].get('scheduler_type', 'N/A')}")
-        print(f"  已调度任务数: {result['metrics'].get('total_scheduled', 'N/A')}")
-        if "avg_latency_ms" in result["metrics"]:
-            print(f"  平均延迟: {result['metrics']['avg_latency_ms']:.2f} ms")
-        if "avg_resource_utilization" in result["metrics"]:
-            print(f"  平均资源利用率: {result['metrics']['avg_resource_utilization']:.2%}")
+    for r in results:
+        if hasattr(r, "summary"):
+            # RunResult (new abstraction)
+            print(f"\n[{r.backend}/{r.scheduler_name}]")
+            print(r.summary())
+        else:
+            # legacy dict from run_with_scheduler
+            print(f"\n{r['scheduler']}:")
+            print(f"  总耗时: {r['elapsed_time']:.2f} 秒")
+            print(f"  调度策略: {r['metrics'].get('scheduler_type', 'N/A')}")
+            print(f"  已调度任务数: {r['metrics'].get('total_scheduled', 'N/A')}")
+            if "avg_latency_ms" in r["metrics"]:
+                print(f"  平均延迟: {r['metrics']['avg_latency_ms']:.2f} ms")
 
     print("\n" + "=" * 80)
     print("✅ 所有实验完成！")
@@ -277,17 +317,17 @@ def main():
     print(
         """
 💡 关键要点：
-  1. 用户在创建 Environment 时指定调度策略
-     - env = LocalEnvironment(scheduler="fifo")
-     - env = RemoteEnvironment(scheduler=LoadAwareScheduler())
+  1. 通过 --backend 选择运行后端，工作负载逻辑无需修改
+     - python scheduler_comparison.py --backend sage
+     - python scheduler_comparison.py --backend ray   (需安装 ray_runner)
 
-  2. 并行度在定义 transformation 时指定
+  2. 用户在创建 Environment 时指定调度策略
+     - env = LocalEnvironment(scheduler="fifo")
+     - env = FlownetEnvironment(scheduler=LoadAwareScheduler())
+
+  3. 并行度在定义 transformation 时指定
      - .map(HeavyProcessor, parallelism=4)
      - .filter(LightFilter, parallelism=2)
-
-  3. 调度器在应用级别工作，对用户透明
-     - 自动根据策略调度所有任务
-     - 开发者可以轻松对比不同策略的性能
     """
     )
 

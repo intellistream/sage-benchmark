@@ -25,8 +25,8 @@ import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from sage.kernel.api.flownet_environment import FlownetEnvironment
     from sage.kernel.api.local_environment import LocalEnvironment
-    from sage.kernel.api.remote_environment import RemoteEnvironment
 
 try:
     # 流汇聚和分流工具
@@ -81,7 +81,7 @@ except ImportError:
 
 
 def register_embedding_service(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     config: Workload4Config,
 ) -> bool:
     """
@@ -108,7 +108,7 @@ def register_embedding_service(
 
 
 def register_vdb_services(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     config: Workload4Config,
 ) -> dict[str, bool]:
     """
@@ -150,7 +150,7 @@ def register_vdb_services(
 
 
 def register_graph_memory_service(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     config: Workload4Config,
 ) -> bool:
     """
@@ -178,7 +178,7 @@ def register_graph_memory_service(
 
 
 def register_llm_service(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     config: Workload4Config,
 ) -> bool:
     """
@@ -207,7 +207,7 @@ def register_llm_service(
 
 
 def register_all_services(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     config: Workload4Config,
 ) -> dict[str, bool]:
     """
@@ -270,16 +270,20 @@ class Workload4Pipeline:
         if self.config.use_remote:
             from pathlib import Path
 
-            from sage.kernel.api.remote_environment import RemoteEnvironment
+            from sage.kernel.api.flownet_environment import FlownetEnvironment
 
             # workload4 所在目录(当前文件的父目录的父目录)
             workload_dir = str(Path(__file__).parent.parent)
 
             # RemoteEnvironment 参数：name, config, host, port, scheduler, extra_python_paths
-            env = RemoteEnvironment(
+            env = FlownetEnvironment(
                 name=name,
                 scheduler=self.config.scheduler_type,  # "fifo" 或 "load_aware"
-                extra_python_paths=[workload_dir],  # 让远程节点能找到 workload4 模块
+                config={
+                    "flownet": {
+                        "extra_python_paths": [workload_dir],
+                    }
+                },
             )
             return env
         else:

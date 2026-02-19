@@ -32,8 +32,9 @@ from sage.common.core import (
     SinkFunction,
     SourceFunction,
 )
-from sage.kernel.api import RemoteEnvironment
+from sage.kernel.api import FlownetEnvironment
 
+from ..common.execution_guard import run_pipeline_bounded
 from .scheduler import HeadNodeScheduler
 
 
@@ -357,16 +358,20 @@ class SchedulingPipeline:
 
     def __init__(self, config: SchedulingConfig):
         self.config = config
-        self.env: Optional[RemoteEnvironment] = None
+        self.env: Optional[FlownetEnvironment] = None
 
-    def build(self) -> RemoteEnvironment:
+    def build(self) -> FlownetEnvironment:
         """构建 Scheduling Pipeline"""
         scheduler = HeadNodeScheduler()
 
-        self.env = RemoteEnvironment(
+        self.env = FlownetEnvironment(
             "scheduling_pipeline",
-            host=self.config.job_manager_host,
-            port=self.config.job_manager_port,
+            config={
+                "flownet": {
+                    "job_manager_host": self.config.job_manager_host,
+                    "job_manager_port": self.config.job_manager_port,
+                }
+            },
             scheduler=scheduler,
         )
 
@@ -405,8 +410,7 @@ class SchedulingPipeline:
 
         start_time = time.time()
         try:
-            self.env.submit()
-            time.sleep(20)  # 调度测试需要更多时间
+            run_pipeline_bounded(self.env, timeout_seconds=120.0, poll_interval_seconds=0.2)
         finally:
             self.env.close()
 

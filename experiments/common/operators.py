@@ -54,7 +54,7 @@ SAMPLE_QUERIES = [
     "How does the memory service work in SAGE?",  # SINGLE
     "Compare FIFO and LoadAware schedulers and their impact on throughput",  # MULTI
     # --- Group 5 ---
-    "Ray cluster",  # ZERO
+    "Flownet cluster",  # ZERO
     "What is the role of middleware components?",  # SINGLE
     "Analyze the effects of parallelism settings on pipeline performance",  # MULTI
     # --- Extra SINGLE queries ---
@@ -2987,7 +2987,7 @@ class AdaptiveRAGResultSink(SinkFunction):
 
 
 # =============================================================================
-# 为 Adaptive-RAG 类设置固定的 __module__，确保 Ray 序列化/反序列化一致性
+# 为 Adaptive-RAG 类设置固定的 __module__，确保分布式序列化/反序列化一致性
 # Worker 节点通过 common.operators 导入，所以需要设置 __module__ 为 common.operators
 # =============================================================================
 _ADAPTIVE_RAG_CLASSES = [
@@ -3398,7 +3398,7 @@ class ServiceGenerator(MapFunction):
             print(f"[Warning] Failed to save generation result: {e}")
 
 
-# Set __module__ for Service-based operators for Ray serialization
+# Set __module__ for Service-based operators for distributed serialization
 _SERVICE_OPERATOR_CLASSES = [
     ServiceRetriever,
     ServiceReranker,
@@ -3409,7 +3409,7 @@ _SERVICE_OPERATOR_CLASSES = [
 for _cls in _SERVICE_OPERATOR_CLASSES:
     _cls.__module__ = "common.operators"
 
-# Set __module__ for FiQA operators for Ray serialization
+# Set __module__ for FiQA operators for distributed serialization
 _FIQA_OPERATOR_CLASSES = [
     FiQATaskSource,
     FiQAFAISSRetriever,

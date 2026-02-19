@@ -186,8 +186,8 @@ python packages/sage-benchmark/src/sage/benchmark/benchmark_sage/experiments/pip
 1. **FAISS 索引文件必须存在** - 如果索引不存在，需要先运行 FiQA pipeline 创建索引
 1. **远程 embedding 服务仍然需要** - 只是 VDB 改为本地 FAISS，embedding 仍用远程服务
 1. **保持 LLM 调用方式不变** - `_generate_via_service` 和 `_llm_call_via_service` 保持原样
-1. **考虑 Ray 分布式序列化** - FAISS 索引在每个 worker 上延迟加载，避免序列化问题
-1. **保留 `__module__` 设置** - 确保 Ray 序列化一致性（operators.py 末尾的 `_ADAPTIVE_RAG_CLASSES` 列表）
+1. **考虑分布式序列化** - FAISS 索引在每个 worker 上延迟加载，避免序列化问题
+1. **保留 `__module__` 设置** - 确保分布式序列化一致性（operators.py 末尾的 `_ADAPTIVE_RAG_CLASSES` 列表）
 
 ## 可选优化
 

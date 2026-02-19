@@ -301,9 +301,9 @@ result = pipeline.run()
 
 **调度策略**：
 
-- Source 节点 → 绑定到 Head Node（Ray node ID affinity）
+- Source 节点 → 绑定到 Head Node（node ID affinity）
 - Sink 节点 → 绑定到 Head Node
-- 其他算子 → Ray 默认负载均衡
+- 其他算子 → 运行时默认负载均衡
 
 ______________________________________________________________________
 

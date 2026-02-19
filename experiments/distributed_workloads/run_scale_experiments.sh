@@ -144,16 +144,16 @@ check_prerequisites() {
         exit 1
     fi
 
-    # 检查 Ray 集群状态
+    # 检查 Flownet 集群状态
     if ! command -v ray &> /dev/null; then
-        print_error "Ray 未安装"
+        print_error "Flownet 运行时未安装（缺少兼容命令入口）"
         exit 1
     fi
 
     ray status &> /dev/null || {
-        print_warning "Ray 集群未启动，尝试启动..."
+        print_warning "Flownet 集群未启动，尝试启动..."
         sage jobmanager start || {
-            print_error "无法启动 Ray 集群"
+            print_error "无法启动 Flownet 集群"
             exit 1
         }
     }

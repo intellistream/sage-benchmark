@@ -22,8 +22,8 @@ from typing import TYPE_CHECKING, Any
 from sage.kernel.api.service import BaseService
 
 if TYPE_CHECKING:
+    from sage.kernel.api.flownet_environment import FlownetEnvironment
     from sage.kernel.api.local_environment import LocalEnvironment
-    from sage.kernel.api.remote_environment import RemoteEnvironment
 
 try:
     from .models import BenchmarkConfig, BenchmarkMetrics
@@ -62,7 +62,7 @@ except ImportError:
 
 
 def register_embedding_service(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     base_url: str,
     model: str,
 ) -> bool:
@@ -134,7 +134,7 @@ def register_embedding_service(
 
 
 def register_vector_db_service(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     embedding_base_url: str,
     embedding_model: str,
     knowledge_base: list[dict[str, Any]] | None = None,
@@ -295,7 +295,7 @@ def register_vector_db_service(
 
 
 def register_llm_service(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     base_url: str,
     model: str,
     max_tokens: int = 256,
@@ -386,7 +386,7 @@ def register_llm_service(
 
 
 def register_fiqa_vdb_service(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     embedding_base_url: str,
     embedding_model: str,
     data_dir: str = FIQA_DATA_DIR,
@@ -578,7 +578,7 @@ def register_fiqa_vdb_service(
 
 
 def register_all_services(
-    env: LocalEnvironment | RemoteEnvironment,
+    env: LocalEnvironment | FlownetEnvironment,
     config: BenchmarkConfig,
     knowledge_base: list[dict[str, Any]] | None = None,
     vdb_node_ip: str | None = None,
@@ -707,13 +707,13 @@ class SchedulingBenchmarkPipeline:
 
         return get_scheduler(scheduler_type, **scheduler_kwargs)
 
-    def _create_environment(self, name: str) -> LocalEnvironment | RemoteEnvironment:
+    def _create_environment(self, name: str) -> LocalEnvironment | FlownetEnvironment:
         """Create execution environment (local or remote)."""
         if self.config.use_remote:
             import os
             from pathlib import Path
 
-            from sage.kernel.api.remote_environment import RemoteEnvironment
+            from sage.kernel.api.flownet_environment import FlownetEnvironment
 
             # Get the experiments directory path for sageFlownet runtime_env
             experiments_dir = Path(__file__).resolve().parent.parent
@@ -741,12 +741,15 @@ class SchedulingBenchmarkPipeline:
             }
 
             self.scheduler = self._create_scheduler()
-            self.env = RemoteEnvironment(
+            config["flownet"] = {
+                "head_node": self.config.head_node,
+                "extra_python_paths": [str(sage_benchmark_src), str(experiments_dir)],
+            }
+
+            self.env = FlownetEnvironment(
                 name=name,
                 scheduler=self.scheduler,
-                host=self.config.head_node,
                 config=config,
-                extra_python_paths=[str(sage_benchmark_src), str(experiments_dir)],
             )
         else:
             from sage.kernel.api.local_environment import LocalEnvironment
