@@ -93,6 +93,19 @@ Manual GitHub Actions trigger is available in:
 
 - `.github/workflows/paired-backend-run.yml`
 
+## Direct comparison report (Issue #6)
+
+If you already have mixed backend outputs, generate a unified report directly:
+
+```bash
+python experiments/analysis/compare_backends.py \
+  /path/to/sage/results \
+  /path/to/ray/results \
+  --output-dir artifacts/backend_comparison
+```
+
+See detailed usage in `docs/compare_backends.md`.
+
 ## Installation Profiles
 
 ```bash
