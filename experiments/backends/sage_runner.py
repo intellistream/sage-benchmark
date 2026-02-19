@@ -185,19 +185,3 @@ class SageRunner(WorkloadRunner):
             results_count=len(_Sink.collected),
             metrics=metrics,
         )
-
-                try:
-                    if hasattr(env, "close"):
-                        env.close()
-                    elif hasattr(env, "shutdown"):
-                        env.shutdown()  # type: ignore[union-attr]
-                except Exception:
-                    pass
-
-        return RunResult(
-            backend=self.backend_name,
-            scheduler_name=spec.scheduler_name,
-            elapsed_time=elapsed,
-            results_count=len(_Sink.collected),
-            metrics=metrics,
-        )
