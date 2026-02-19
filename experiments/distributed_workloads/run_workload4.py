@@ -4,8 +4,11 @@ Workload 4 执行脚本
 ==================
 
 用法:
-    # 使用默认配置
+    # 使用默认配置（SAGE 后端）
     python run_workload4.py
+
+    # 使用 Ray 基线后端
+    python run_workload4.py --backend ray --num-tasks 50
 
     # 使用命令行参数
     python run_workload4.py --num-tasks 100 --duration 1200 --query-qps 40 --doc-qps 25
@@ -18,6 +21,10 @@ Workload 4 执行脚本
 
     # 调试模式（小规模）
     python run_workload4.py --debug
+
+    # 对比运行示例
+    python run_workload4.py --backend sage --num-tasks 50 --debug
+    python run_workload4.py --backend ray  --num-tasks 50 --debug
 """
 
 import argparse
@@ -38,6 +45,11 @@ sys.path.insert(0, str(SAGE_ROOT / "packages" / "sage-kernel" / "src"))
 sys.path.insert(0, str(SAGE_ROOT / "packages" / "sage-common" / "src"))
 sys.path.insert(0, str(SAGE_ROOT / "packages" / "sage-libs" / "src"))
 sys.path.insert(0, str(SAGE_ROOT / "packages" / "sage-benchmark" / "src"))
+
+# 添加 backends 抽象层路径（相对于本文件所在目录的上两级）
+_BACKENDS_ROOT = Path(__file__).resolve().parents[1]
+if str(_BACKENDS_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BACKENDS_ROOT))
 
 from workload4.config import Workload4Config
 from workload4.pipeline import Workload4Pipeline
@@ -168,6 +180,30 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="http://11.11.11.7:8090/v1",
         help="Embedding 服务 URL（默认: http://11.11.11.7:8090/v1）",
+    )
+
+    # === Backend 选择 ===
+    parser.add_argument(
+        "--backend",
+        "-b",
+        type=str,
+        default="sage",
+        choices=["sage", "ray"],
+        help="执行后端：sage（默认）或 ray（Ray 基线），用于并排基准对比",
+    )
+
+    parser.add_argument(
+        "--ray-address",
+        type=str,
+        default=None,
+        help="Ray 集群地址（仅 --backend ray 生效；默认: 自动本地模式）",
+    )
+
+    parser.add_argument(
+        "--ray-parallelism",
+        type=int,
+        default=4,
+        help="Ray 后端批提交并行度（默认: 4）",
     )
 
     return parser.parse_args()
@@ -388,6 +424,101 @@ def print_metrics_summary(metrics_dir: Path) -> None:
 
 
 # =============================================================================
+# Ray 后端入口（MVP）
+# =============================================================================
+
+
+def _run_ray_backend(args: argparse.Namespace, config: Workload4Config) -> int:
+    """Run Workload 4 via the Ray backend runner.
+
+    Maps the Workload4Config fields to a backend-agnostic WorkloadSpec and
+    dispatches to RayRunner.  The resulting RunResult is printed to stdout
+    using the unified summary format so it can be compared against the SAGE
+    backend output directly.
+
+    Parameters
+    ----------
+    args:
+        Parsed CLI namespace (provides ``ray_address`` and ``ray_parallelism``).
+    config:
+        Loaded and validated Workload4Config instance.
+
+    Returns
+    -------
+    int
+        0 on success, non-zero on failure.
+    """
+    # Lazy import: register backends only when needed
+    from backends.base import WorkloadSpec, get_runner  # noqa: PLC0415
+    import backends.ray_runner  # noqa: F401, PLC0415  – registers "ray" backend
+
+    logging.info("[Ray] 准备 Ray 后端运行器...")
+
+    try:
+        runner = get_runner("ray")
+    except RuntimeError as exc:
+        logging.error(str(exc))
+        logging.error(
+            "Ray 安装指南:\n"
+            '    pip install "ray[default]>=2.9"\n'
+            "安装完成后重新运行: python run_workload4.py --backend ray"
+        )
+        return 1
+
+    # Map Workload4Config → WorkloadSpec
+    extra: dict[str, Any] = {
+        "max_wait_seconds": config.duration,
+        "sleep_per_item": 0.01,
+    }
+    if hasattr(args, "ray_address") and args.ray_address:
+        extra["ray_address"] = args.ray_address
+
+    parallelism: int = getattr(args, "ray_parallelism", 4)
+
+    spec = WorkloadSpec(
+        name="workload4",
+        total_items=config.num_tasks,
+        parallelism=parallelism,
+        scheduler_name=config.scheduler_type,
+        extra=extra,
+    )
+
+    logging.info(
+        f"[Ray] 开始执行: total_items={spec.total_items}, "
+        f"parallelism={spec.parallelism}, scheduler={spec.scheduler_name}"
+    )
+
+    start_wall = time.time()
+    try:
+        result = runner.run(spec)
+    except Exception as exc:  # noqa: BLE001
+        logging.error(f"[Ray] 运行时错误: {exc}")
+        logging.debug(traceback.format_exc())
+        return 1
+
+    wall_time = time.time() - start_wall
+
+    # ------------------------------------------------------------------
+    # Print unified result summary (matches RunResult.summary() schema)
+    # ------------------------------------------------------------------
+    print("\n" + "=" * 80)
+    print("Ray Backend - Workload4 Result")
+    print("=" * 80)
+    print(result.summary())
+    print(f"Wall clock (s): {wall_time:.3f}")
+    print("=" * 80 + "\n")
+
+    # Write result to output dir so it can be compared with SAGE output
+    output_dir = Path(config.metrics_output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result_path = output_dir / "ray_backend_result.txt"
+    result_path.write_text(result.summary() + f"\nWall clock (s): {wall_time:.3f}\n")
+    logging.info(f"[Ray] 结果已保存到: {result_path}")
+
+    return 0
+
+
+# =============================================================================
 # 主函数
 # =============================================================================
 
@@ -421,6 +552,19 @@ def main() -> int:
         if args.dry_run:
             logging.info("Dry run 模式 - 仅显示配置，不执行")
             return 0
+
+        backend_name: str = args.backend.lower()
+        logging.info(f"执行后端: {backend_name.upper()}")
+
+        # ------------------------------------------------------------------
+        # Ray 后端路径 (MVP)
+        # ------------------------------------------------------------------
+        if backend_name == "ray":
+            return _run_ray_backend(args, config)
+
+        # ------------------------------------------------------------------
+        # SAGE 后端路径（原有逻辑）
+        # ------------------------------------------------------------------
 
         # 5. 检查环境变量
         required_vars = ["OPENAI_API_KEY", "HF_TOKEN"]

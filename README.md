@@ -40,11 +40,46 @@ rather than a one-off script. This keeps paper claims, configs, and run outputs 
 Examples:
 
 ```bash
+# Run a single workload against the default SAGE backend
 python -m sage.benchmark.benchmark_sage --experiment Q1
+
+# Run all workloads
+python -m sage.benchmark.benchmark_sage --all
+
+# Quick smoke-test
 python -m sage.benchmark.benchmark_sage --experiment Q3 --quick
 python -m sage.benchmark.benchmark_sage --experiment Q7 --quick
-python -m sage.benchmark.benchmark_sage --all
+
+# Backend comparison: same workload, two backends, for fair comparison
+python -m sage.benchmark.benchmark_sage --experiment Q1 --backend sage --repeat 3 --seed 42
+python -m sage.benchmark.benchmark_sage --experiment Q1 --backend ray  --repeat 3 --seed 42
+
+# Distributed run: 4 nodes, 8-way operator parallelism
+python -m sage.benchmark.benchmark_sage --experiment Q4 \
+    --backend sage --nodes 4 --parallelism 8 --output-dir results/q4_scale
+
+# Validate config without running
+python -m sage.benchmark.benchmark_sage --experiment Q2 --dry-run
 ```
+
+### Standardised CLI flags (Issue #2)
+
+All workload entry points share the same flag contract so backend comparison runs always
+produce comparable `run_config` records.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--backend {sage,ray}` | `sage` | Runtime backend |
+| `--nodes N` | `1` | Worker nodes for distributed execution |
+| `--parallelism P` | `2` | Operator parallelism hint |
+| `--repeat R` | `1` | Independent repetitions (averaged in results) |
+| `--seed SEED` | `42` | Global RNG seed for reproducibility |
+| `--output-dir DIR` | `results` | Root directory for artefacts |
+| `--quick` | off | Reduced-scale smoke-test run |
+| `--dry-run` | off | Validate config, skip execution |
+| `--verbose` / `-v` | off | Enable debug output |
+
+Individual workloads may add extra flags on top of the shared contract.
 
 At the repo root, `docs/icml-prompts/` contains reusable writing prompts. You can either reference
 them directly or copy customized versions into this folder when preparing a specific ICML

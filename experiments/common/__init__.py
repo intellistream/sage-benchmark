@@ -45,6 +45,13 @@ from .operators import (
     TaskSource,
     ZeroComplexityFilter,
 )
+from .cli_args import (
+    SUPPORTED_BACKENDS,
+    DEFAULT_BACKEND,
+    add_common_benchmark_args,
+    validate_benchmark_args,
+    build_run_config,
+)
 from .pipeline import SchedulingBenchmarkPipeline, register_fiqa_vdb_service
 from .request_utils import (
     BenchmarkClient,
@@ -53,6 +60,12 @@ from .request_utils import (
 )
 
 __all__ = [
+    # cli helpers
+    "SUPPORTED_BACKENDS",
+    "DEFAULT_BACKEND",
+    "add_common_benchmark_args",
+    "validate_benchmark_args",
+    "build_run_config",
     # models - general
     "BenchmarkConfig",
     "BenchmarkMetrics",
