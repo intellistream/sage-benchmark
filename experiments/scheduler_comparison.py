@@ -15,20 +15,26 @@
 """
 
 import argparse
+import sys
 import uuid
 import time
 from pathlib import Path
 
-from sage.common.core import MapFunction, SinkFunction, SourceFunction
-from sage.kernel.api import FlownetEnvironment
-from sage.kernel.api.local_environment import LocalEnvironment
-from sage.kernel.scheduler.impl import FIFOScheduler, LoadAwareScheduler
+# ---------------------------------------------------------------------------
+# sys.path guard – make experiments/ importable regardless of CWD.
+# Python adds the script's parent directory only when executed directly.
+# When the file is discovered via pytest / tox from the repo root, the
+# experiments/ package root is absent from sys.path, which causes
+#   ModuleNotFoundError: No module named 'backends'
+# preventing backend registration and producing "Unknown backend" errors.
+# ---------------------------------------------------------------------------
+_EXPERIMENTS_DIR = Path(__file__).resolve().parent
+if str(_EXPERIMENTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_EXPERIMENTS_DIR))
 
-from common.execution_guard import run_pipeline_bounded
+from sage.common.core import MapFunction, SinkFunction, SourceFunction
 
 # Register available backends (import triggers @register_runner decoration)
-# Use direct 'backends.*' imports – experiments/ is in sys.path when this
-# script is executed directly (Python adds the script's directory).
 import backends.sage_runner  # noqa: F401  registers "sage"
 from backends.base import WorkloadSpec, get_runner, list_backends
 from common.metrics_schema import (
@@ -143,107 +149,6 @@ def build_unified_record(
             "raw_metrics": raw_metrics,
         },
     )
-
-
-def run_with_scheduler(scheduler, env_class, scheduler_name):
-    """使用指定调度器运行 pipeline"""
-    print(f"\n{'=' * 60}")
-    print(f"🚀 运行实验: {scheduler_name}")
-    print(f"{'=' * 60}\n")
-
-    env = None
-    try:
-        ResultSink.clear_all_results()
-
-        # 创建环境并指定调度器
-        if env_class == LocalEnvironment:
-            env = LocalEnvironment(name=f"scheduler_test_{scheduler_name}", scheduler=scheduler)
-        else:
-            env = FlownetEnvironment(name=f"scheduler_test_{scheduler_name}", scheduler=scheduler)
-
-        # 构建 pipeline
-        # 注意：并行度在 operator 级别指定
-        (
-            env.from_source(DataSource, total_items=10)  # 减少到10个项目以加快测试
-            .map(HeavyProcessor, parallelism=2)  # 资源密集型 operator，2 个并行实例
-            .filter(LightFilter, parallelism=1)  # 轻量级 operator，1 个并行实例
-            .sink(ResultSink)  # type: ignore[arg-type]  # Pass class, not instance
-        )
-
-        # 记录开始时间
-        start_time = time.time()
-
-        # 提交执行
-        print(f"▶️  开始执行 pipeline (调度器: {scheduler_name})...\n")
-
-        # 使用受控超时，避免执行卡住
-        max_wait_time = 30  # 最大等待30秒
-        try:
-            guard_result = run_pipeline_bounded(
-                env,
-                timeout_seconds=max_wait_time,
-                poll_interval_seconds=0.2,
-            )
-
-            if guard_result.timed_out:
-                print(f"⚠️  {scheduler_name} 执行超时 ({max_wait_time}s)，已停止任务")
-
-        except Exception as e:
-            print(f"❌ {scheduler_name} 执行出错: {e}")
-            # 不抛出异常，而是记录错误并继续
-
-        # 记录结束时间
-        end_time = time.time()
-        elapsed = end_time - start_time
-
-        # 获取调度器指标
-        try:
-            metrics = {}
-            if (
-                hasattr(env, "scheduler")
-                and env.scheduler is not None
-                and hasattr(env.scheduler, "get_metrics")
-            ):
-                metrics = env.scheduler.get_metrics()  # type: ignore[union-attr]
-        except Exception as e:
-            print(f"⚠️  无法获取调度器指标: {e}")
-            metrics = {"error": str(e)}
-
-        print(f"\n{'=' * 60}")
-        print(f"📊 {scheduler_name} 执行结果")
-        print(f"{'=' * 60}")
-        print(f"总耗时: {elapsed:.2f} 秒")
-        print(f"处理结果数: {ResultSink.result_count()}")
-        print("调度器指标:")
-        for key, value in metrics.items():
-            print(f"  - {key}: {value}")
-        print(f"{'=' * 60}\n")
-
-        return {
-            "scheduler": scheduler_name,
-            "elapsed_time": elapsed,
-            "metrics": metrics,
-            "results_count": ResultSink.result_count(),
-        }
-
-    except Exception as e:
-        print(f"❌ {scheduler_name} 运行失败: {e}")
-        return {
-            "scheduler": scheduler_name,
-            "elapsed_time": 0,
-            "metrics": {"error": str(e)},
-            "results_count": 0,
-        }
-    finally:
-        # 确保资源清理
-        if env:
-            try:
-                if hasattr(env, "close"):
-                    env.close()
-                elif hasattr(env, "shutdown"):
-                    env.shutdown()  # type: ignore[union-attr]
-            except Exception:  # noqa: S110
-                pass
 
 
 def main():
@@ -385,17 +290,20 @@ def main():
     results = [result]
 
     # ------------------------------------------------------------------
-    # Legacy multi-scheduler comparison (SAGE default path, unchanged)
-    # Only runs in non-test mode to keep CI fast.
+    # Multi-scheduler comparison: complementary scheduler via the same
+    # WorkloadRunner abstraction – no new daemon is spawned, no port fight.
+    # Skipped when the user already chose load_aware, or in test mode.
     # ------------------------------------------------------------------
-    if not test_mode and args.backend == "sage":
-        time.sleep(1)
-        print("\n🧪 实验 2: 负载感知调度器 (Local) – 对比组")
-        result2 = run_with_scheduler(
-            scheduler=LoadAwareScheduler(max_concurrent=10),
-            env_class=LocalEnvironment,
-            scheduler_name="LoadAware_Local",
+    if not test_mode and args.backend == "sage" and args.scheduler != "load_aware":
+        time.sleep(0.5)
+        print("\n🧪 实验 2: 负载感知调度器 – 对比组")
+        spec2 = WorkloadSpec(
+            name="scheduler_demo_load_aware",
+            total_items=args.items,
+            parallelism=args.parallelism,
+            scheduler_name="load_aware",
         )
+        result2 = runner.run(spec2)
         results.append(result2)
 
     # ------------------------------------------------------------------
@@ -406,18 +314,8 @@ def main():
     print("=" * 80)
 
     for r in results:
-        if hasattr(r, "summary"):
-            # RunResult (new abstraction)
-            print(f"\n[{r.backend}/{r.scheduler_name}]")
-            print(r.summary())
-        else:
-            # legacy dict from run_with_scheduler
-            print(f"\n{r['scheduler']}:")
-            print(f"  总耗时: {r['elapsed_time']:.2f} 秒")
-            print(f"  调度策略: {r['metrics'].get('scheduler_type', 'N/A')}")
-            print(f"  已调度任务数: {r['metrics'].get('total_scheduled', 'N/A')}")
-            if "avg_latency_ms" in r["metrics"]:
-                print(f"  平均延迟: {r['metrics']['avg_latency_ms']:.2f} ms")
+        print(f"\n[{r.backend}/{r.scheduler_name}]")
+        print(r.summary())
 
     print("\n" + "=" * 80)
     print("✅ 所有实验完成！")
