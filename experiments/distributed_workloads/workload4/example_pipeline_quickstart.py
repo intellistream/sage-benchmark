@@ -14,7 +14,6 @@ sys.path.insert(0, str(workload4_dir))
 
 try:
     from pipeline import (
-        Workload4Config,
         Workload4Pipeline,
         create_workload4_pipeline,
         register_all_services,
@@ -26,7 +25,6 @@ except ImportError:
     # 如果在包内运行
     from .config import Workload4Config
     from .pipeline import (
-        Workload4Config,
         Workload4Pipeline,
         create_workload4_pipeline,
         register_all_services,

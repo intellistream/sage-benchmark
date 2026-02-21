@@ -1,12 +1,12 @@
 import argparse
 import uuid
 
-from sage.benchmark.benchmark_sage.experiments.q2_controlmix import ControlPlaneExperiment
 from sage.benchmark.benchmark_sage.experiments.common.cli_args import (
     add_common_benchmark_args,
     build_run_config,
     validate_benchmark_args,
 )
+from sage.benchmark.benchmark_sage.experiments.q2_controlmix import ControlPlaneExperiment
 
 
 class ScalabilityExperiment(ControlPlaneExperiment):

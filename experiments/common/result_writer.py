@@ -9,7 +9,6 @@ from typing import Any
 
 from .metrics_schema import normalize_metrics_record
 
-
 CSV_FIELD_ORDER: tuple[str, ...] = (
     "backend",
     "workload",

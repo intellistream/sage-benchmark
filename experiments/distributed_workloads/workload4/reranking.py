@@ -15,7 +15,6 @@ import time
 from typing import Any
 
 import numpy as np
-
 from sage.common.core.functions import MapFunction
 
 from .models import (

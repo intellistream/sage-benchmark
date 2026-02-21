@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any
 
 import networkx as nx
 import numpy as np
-
 from sage.common.core.functions.map_function import MapFunction
 
 try:

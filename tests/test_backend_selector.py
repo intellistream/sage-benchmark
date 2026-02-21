@@ -7,14 +7,13 @@ started; the goal is to verify dispatch, error handling, and list_backends().
 
 from __future__ import annotations
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # We need a clean registry for isolated tests, so we patch it per test.
 # ---------------------------------------------------------------------------
 # Import via 'backends.*' (experiments/ is in sys.path via conftest)
 # to avoid triggering experiments/__init__.py which pulls sage.benchmark.
 import backends.base as backend_base
+import pytest
 from backends.base import (
     RunResult,
     WorkloadRunner,
@@ -23,7 +22,6 @@ from backends.base import (
     list_backends,
     register_runner,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

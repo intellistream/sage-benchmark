@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from importlib import metadata
 
-
 CORE_PACKAGES = [
     "isage",
     "isage-common",

@@ -60,14 +60,13 @@ _BACKENDS_ROOT = Path(__file__).resolve().parents[1]
 if str(_BACKENDS_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKENDS_ROOT))
 
-from workload4.config import Workload4Config
-from workload4.pipeline import Workload4Pipeline
-
 from common.reproducibility import (
     build_input_parity_plan,
     compute_config_fingerprint,
     set_global_seed,
 )
+from workload4.config import Workload4Config
+from workload4.pipeline import Workload4Pipeline
 
 # =============================================================================
 # 日志配置
@@ -554,8 +553,8 @@ def _run_ray_backend(
         0 on success, non-zero on failure.
     """
     # Lazy import: register backends only when needed
-    from backends.base import WorkloadSpec, get_runner  # noqa: PLC0415
     import backends.ray_runner  # noqa: F401, PLC0415  – registers "ray" backend
+    from backends.base import WorkloadSpec, get_runner  # noqa: PLC0415
 
     logging.info("[Ray] 准备 Ray 后端运行器...")
 

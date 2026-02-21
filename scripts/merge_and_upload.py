@@ -35,7 +35,7 @@ def download_from_hf(filename: str) -> list[dict]:
             return data
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            print(f"    ⚠️ 文件不存在（首次上传）")
+            print("    ⚠️ 文件不存在（首次上传）")
         else:
             # 回退到主站
             alt = f"https://huggingface.co/datasets/{HF_REPO}/resolve/{HF_BRANCH}/{filename}"
@@ -128,7 +128,7 @@ def main() -> None:
     hf_data_dir = Path("hf_data")
 
     if not hf_data_dir.exists():
-        print(f"\n❌ hf_data/ 目录不存在")
+        print("\n❌ hf_data/ 目录不存在")
         print("💡 用户应该先运行 'python scripts/aggregate_for_hf.py'")
         raise SystemExit(1)
 

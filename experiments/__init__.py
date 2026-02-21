@@ -15,6 +15,7 @@ from sage.benchmark.benchmark_sage.experiments.config import (
     ModelConfig,
     WorkloadConfig,
 )
+from sage.benchmark.benchmark_sage.experiments.plotting import Plotter
 from sage.benchmark.benchmark_sage.experiments.q1_pipelinechain import E2EPipelineExperiment
 from sage.benchmark.benchmark_sage.experiments.q2_controlmix import ControlPlaneExperiment
 from sage.benchmark.benchmark_sage.experiments.q3_noisyneighbor import IsolationExperiment
@@ -23,7 +24,6 @@ from sage.benchmark.benchmark_sage.experiments.q5_heteroresilience import Hetero
 from sage.benchmark.benchmark_sage.experiments.q6_bursttown import BurstTownExperiment
 from sage.benchmark.benchmark_sage.experiments.q7_reconfigdrill import ReconfigDrillExperiment
 from sage.benchmark.benchmark_sage.experiments.q8_recoverysoak import RecoverySoakExperiment
-from sage.benchmark.benchmark_sage.experiments.plotting import Plotter
 
 __all__ = [
     "BaseExperiment",

@@ -203,7 +203,6 @@ def register_vector_db_service(
                     return
 
                 import numpy as np
-
                 from sage.middleware.components.sage_db.python.micro_service.sage_db_service import (
                     SageDBService,
                 )

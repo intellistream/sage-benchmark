@@ -10,9 +10,9 @@ This demonstrates SAGE's Multi-Branch Pipeline pattern:
 """
 
 import os
+import sys
 import time
 from pathlib import Path
-import sys
 
 os.environ["SAGE_LOG_LEVEL"] = "ERROR"
 
@@ -28,8 +28,8 @@ if __package__ in (None, ""):
         sys.path.insert(0, str(experiments_dir))
     from common.execution_guard import run_pipeline_bounded
 else:
-    from .classifier import create_classifier
     from ...common.execution_guard import run_pipeline_bounded
+    from .classifier import create_classifier
 from sage.common.core import FilterFunction, MapFunction, SinkFunction, SourceFunction
 from sage.kernel.api import LocalEnvironment
 

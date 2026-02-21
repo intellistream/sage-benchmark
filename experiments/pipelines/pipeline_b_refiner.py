@@ -27,7 +27,6 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import numpy as np
-
 from sage.common.core.functions import MapFunction, SinkFunction, SourceFunction
 from sage.common.utils.config.loader import load_config
 from sage.common.utils.logging.custom_logger import CustomLogger

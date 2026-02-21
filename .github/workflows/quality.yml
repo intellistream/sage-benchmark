@@ -40,7 +40,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install pytest
-        run: pip install pytest
+        run: pip install pytest pytest-benchmark
 
       - name: Run legacy term test
         run: pytest tests/test_legacy_terms.py -v

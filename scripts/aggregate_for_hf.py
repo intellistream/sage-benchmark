@@ -43,7 +43,7 @@ def download_from_hf(filename: str) -> list[dict]:
             return data
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            print(f"  ⚠️ 文件不存在（首次上传）")
+            print("  ⚠️ 文件不存在（首次上传）")
         else:
             # 尝试主站
             alt_url = f"https://huggingface.co/datasets/{HF_REPO}/resolve/{HF_BRANCH}/{filename}"
@@ -150,49 +150,49 @@ def main() -> None:
     hf_output_dir.mkdir(exist_ok=True)
 
     # Step 1: 从 HF 下载现有数据
-    print(f"\n📥 从 Hugging Face 下载最新数据...")
+    print("\n📥 从 Hugging Face 下载最新数据...")
     print(f"   仓库: https://huggingface.co/datasets/{HF_REPO}")
     existing_results = download_from_hf("benchmark_results.json")
 
     # Step 2: 加载本地新结果
-    print(f"\n📂 扫描本地 results/ 目录...")
+    print("\n📂 扫描本地 results/ 目录...")
     if not results_dir.exists():
-        print(f"  ⚠️ results/ 目录不存在")
-        print(f"  💡 请先运行 benchmark 生成结果")
+        print("  ⚠️ results/ 目录不存在")
+        print("  💡 请先运行 benchmark 生成结果")
         local_records: list[dict] = []
     else:
         local_records = load_local_results(results_dir)
         if not local_records:
-            print(f"  ⚠️ 未找到任何 unified_results.jsonl 文件")
-            print(f"  💡 请先运行 benchmark: python experiments/run_all.sh")
+            print("  ⚠️ 未找到任何 unified_results.jsonl 文件")
+            print("  💡 请先运行 benchmark: python experiments/run_all.sh")
         else:
             print(f"  ✓ 找到 {len(local_records)} 条本地结果")
 
     # Step 3: 智能合并
-    print(f"\n🔀 智能合并数据...")
+    print("\n🔀 智能合并数据...")
     merged = merge_results(existing_results, local_records)
 
     # Step 4: 保存到 hf_data/
-    print(f"\n💾 保存到 hf_data/ 目录...")
+    print("\n💾 保存到 hf_data/ 目录...")
     output_file = hf_output_dir / "benchmark_results.json"
     with output_file.open("w", encoding="utf-8") as fh:
         json.dump(merged, fh, indent=2, ensure_ascii=False)
     print(f"  ✓ {output_file.name} ({len(merged)} 条)")
 
-    print(f"\n" + "=" * 70)
-    print(f"✅ 聚合完成！")
-    print(f"=" * 70)
-    print(f"\n📌 下一步操作：")
-    print(f"  1. 提交聚合数据到 git:")
-    print(f"     git add hf_data/")
-    print(f"     git commit -m 'feat: add benchmark results'")
-    print(f"     git push")
-    print(f"\n  2. GitHub Actions 会自动:")
-    print(f"     - 与 HF 最新数据合并（解决并发冲突）")
-    print(f"     - 上传到 Hugging Face")
-    print(f"     - 清理 hf_data/ 保持仓库轻量")
-    print(f"\n💡 提示: results/ 目录不会被提交（在 .gitignore 中）")
-    print(f"=" * 70)
+    print("\n" + "=" * 70)
+    print("✅ 聚合完成！")
+    print("=" * 70)
+    print("\n📌 下一步操作：")
+    print("  1. 提交聚合数据到 git:")
+    print("     git add hf_data/")
+    print("     git commit -m 'feat: add benchmark results'")
+    print("     git push")
+    print("\n  2. GitHub Actions 会自动:")
+    print("     - 与 HF 最新数据合并（解决并发冲突）")
+    print("     - 上传到 Hugging Face")
+    print("     - 清理 hf_data/ 保持仓库轻量")
+    print("\n💡 提示: results/ 目录不会被提交（在 .gitignore 中）")
+    print("=" * 70)
 
 
 if __name__ == "__main__":

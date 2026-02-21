@@ -1,6 +1,7 @@
 """Tests for sage_benchmark package."""
 
 import pytest
+
 from sage_benchmark import __version__
 
 

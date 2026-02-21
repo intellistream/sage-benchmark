@@ -28,7 +28,6 @@ os.environ.pop("https_proxy", None)
 os.environ.pop("HTTPS_PROXY", None)
 
 import httpx
-
 from sage.common.core import (
     MapFunction,
     SinkFunction,

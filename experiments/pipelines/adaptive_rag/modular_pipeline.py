@@ -48,8 +48,7 @@ from sage.common.core import (
     SinkFunction,
     SourceFunction,
 )
-from sage.kernel.api import FlownetEnvironment
-from sage.kernel.api import LocalEnvironment
+from sage.kernel.api import FlownetEnvironment, LocalEnvironment
 
 # 支持直接运行和模块运行
 try:

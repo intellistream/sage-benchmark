@@ -16,8 +16,8 @@
 
 import argparse
 import sys
-import uuid
 import time
+import uuid
 from importlib import metadata
 from pathlib import Path
 
@@ -33,19 +33,18 @@ _EXPERIMENTS_DIR = Path(__file__).resolve().parent
 if str(_EXPERIMENTS_DIR) not in sys.path:
     sys.path.insert(0, str(_EXPERIMENTS_DIR))
 
-from sage.common.core import MapFunction, SinkFunction, SourceFunction
-
 # Register available backends (import triggers @register_runner decoration)
 import backends.sage_runner  # noqa: F401  registers "sage"
 from backends.base import WorkloadSpec, get_runner, list_backends
+from common.component_versions import collect_component_versions
 from common.metrics_schema import (
     UnifiedMetricsRecord,
     compute_backend_hash,
     compute_config_hash,
 )
 from common.result_writer import append_jsonl_record, export_jsonl_to_csv
-from common.component_versions import collect_component_versions
 from common.system_profile import collect_system_profile
+from sage.common.core import MapFunction, SinkFunction, SourceFunction
 
 try:
     from _version import __version__ as BENCHMARK_VERSION

@@ -71,12 +71,12 @@ if __package__ in (None, ""):
     )
     from common.execution_guard import run_pipeline_bounded
 else:
+    from ...common.execution_guard import run_pipeline_bounded
     from .classifier import (
         ClassificationResult,
         QueryComplexityLevel,
         create_classifier,
     )
-    from ...common.execution_guard import run_pipeline_bounded
 
 # ============================================================================
 # 数据结构定义

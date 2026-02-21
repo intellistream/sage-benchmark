@@ -19,7 +19,6 @@ import sys
 import uuid
 from pathlib import Path
 
-
 WORKLOAD_CATALOG = {
     "Q1": {
         "name": "PipelineChain",

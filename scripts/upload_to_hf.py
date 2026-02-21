@@ -90,7 +90,7 @@ def main() -> None:
     print(f"\n📂 Uploading to: {HF_REPO}")
     upload_files(api, HF_REPO, files_to_upload)
 
-    print(f"\n✅ Upload complete!")
+    print("\n✅ Upload complete!")
     print(f"🔗 查看: https://huggingface.co/datasets/{HF_REPO}")
 
 

@@ -26,7 +26,6 @@ from enum import Enum
 from typing import Any, Optional
 
 import httpx
-
 from sage.common.core import (
     MapFunction,
     SinkFunction,

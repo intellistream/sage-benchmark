@@ -12,15 +12,17 @@ import json
 import random
 import time
 import uuid
-from importlib import metadata
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
+from importlib import metadata
 from pathlib import Path
 
 import numpy as np
-
 from sage.benchmark.benchmark_sage.experiments.common import RequestResult
+from sage.benchmark.benchmark_sage.experiments.common.component_versions import (
+    collect_component_versions,
+)
 from sage.benchmark.benchmark_sage.experiments.common.metrics_schema import (
     UnifiedMetricsRecord,
     compute_backend_hash,
@@ -29,9 +31,6 @@ from sage.benchmark.benchmark_sage.experiments.common.metrics_schema import (
 from sage.benchmark.benchmark_sage.experiments.common.result_writer import (
     append_jsonl_record,
     export_jsonl_to_csv,
-)
-from sage.benchmark.benchmark_sage.experiments.common.component_versions import (
-    collect_component_versions,
 )
 from sage.benchmark.benchmark_sage.experiments.common.system_profile import collect_system_profile
 from sage.benchmark.benchmark_sage.experiments.config import ExperimentConfig

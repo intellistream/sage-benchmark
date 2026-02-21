@@ -170,8 +170,8 @@ def main() -> None:  # pragma: no cover
     import sys
     from pathlib import Path
 
-    from sage.benchmark.benchmark_sage.experiments.config import ExperimentConfig, WorkloadConfig
     from sage.benchmark.benchmark_sage.config.config_loader import ConfigLoader
+    from sage.benchmark.benchmark_sage.experiments.config import ExperimentConfig, WorkloadConfig
 
     parser = _build_parser()
     args = parser.parse_args()

@@ -255,7 +255,7 @@ class TestSemanticJoinOperator:
     def test_empty_window_query(self):
         """测试空窗口查询"""
         query = self._create_query("q1", 1.0)
-        _ = self.operator.map0(query)
+        result = self.operator.map0(query)
 
         assert result is None  # 无匹配
 
