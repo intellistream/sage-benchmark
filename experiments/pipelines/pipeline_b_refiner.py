@@ -27,7 +27,10 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import numpy as np
+from sage.common.config.ports import SagePorts
 from sage.common.core.functions import MapFunction, SinkFunction, SourceFunction
+
+_DEFAULT_LLM_URL = f"http://localhost:{SagePorts.LLM_DEFAULT}/v1"
 from sage.common.utils.config.loader import load_config
 from sage.common.utils.logging.custom_logger import CustomLogger
 from sage.kernel.api.local_environment import LocalEnvironment
@@ -275,7 +278,7 @@ def register_refiner_service(
 
 def register_llm_service(
     env: LocalEnvironment,
-    base_url: str = "http://localhost:8001/v1",
+    base_url: str = _DEFAULT_LLM_URL,
     model_name: str = "Qwen/Qwen2.5-7B-Instruct",
     api_key: str = "",
 ) -> bool:
@@ -640,7 +643,7 @@ def pipeline_run(config: dict) -> None:
     generator_cfg = config.get("generator", {}).get("vllm", {})
     register_llm_service(
         env,
-        base_url=generator_cfg.get("base_url", "http://localhost:8001/v1"),
+        base_url=generator_cfg.get("base_url", _DEFAULT_LLM_URL),
         model_name=generator_cfg.get("model_name", "Qwen/Qwen2.5-7B-Instruct"),
         api_key=generator_cfg.get("api_key", ""),
     )

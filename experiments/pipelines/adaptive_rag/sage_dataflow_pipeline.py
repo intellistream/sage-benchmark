@@ -14,7 +14,7 @@ Adaptive-RAG SAGE 数据流 Pipeline 实现
 
 用法示例:
     from sage.kernel.api import LocalEnvironment
-    from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag import (
+    from experiments.pipelines.adaptive_rag import (
         QuerySource, ClassifierMapFunction, AdaptiveRouterMapFunction, ResultSink
     )
 

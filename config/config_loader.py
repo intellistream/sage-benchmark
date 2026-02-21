@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from sage.common.config.ports import SagePorts
+
 
 @dataclass
 class HardwareConfig:
@@ -79,7 +81,7 @@ class ExperimentConfig:
     name: str
     description: str
     experiment_section: str
-    gateway_url: str = "http://localhost:8888"
+    gateway_url: str = f"http://localhost:{SagePorts.GATEWAY_DEFAULT}"
     hardware: HardwareConfig = field(default_factory=HardwareConfig)
     llm_model: ModelConfig = field(
         default_factory=lambda: ModelConfig(name="Qwen/Qwen2.5-7B-Instruct")
@@ -212,7 +214,7 @@ class ConfigLoader:
             name=exp.get("name", "unnamed"),
             description=exp.get("description", ""),
             experiment_section=exp.get("section", ""),
-            gateway_url=raw.get("gateway_url", "http://localhost:8888"),
+            gateway_url=raw.get("gateway_url", f"http://localhost:{SagePorts.GATEWAY_DEFAULT}"),
             hardware=hardware,
             llm_model=llm_model,
             embedding_model=embedding_model,

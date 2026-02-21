@@ -375,7 +375,7 @@ def build_sage_pipeline(
     用法:
     ```python
     from sage.kernel import StreamExecutionEnvironment
-    from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag import build_sage_pipeline
+    from experiments.pipelines.adaptive_rag import build_sage_pipeline
 
     env = StreamExecutionEnvironment.get_execution_environment()
     source = env.from_collection(["What is AI?", "Compare X and Y"])

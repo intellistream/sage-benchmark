@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
+from sage.common.config.ports import SagePorts
+
 
 @dataclass
 class HardwareConfig:
@@ -46,7 +48,7 @@ class ExperimentConfig:
     name: str
     description: str
     experiment_section: str
-    gateway_url: str = "http://localhost:8888"
+    gateway_url: str = f"http://localhost:{SagePorts.GATEWAY_DEFAULT}"
     hardware: HardwareConfig = field(default_factory=HardwareConfig)
     llm_model: ModelConfig = field(
         default_factory=lambda: ModelConfig(name="Qwen/Qwen2.5-7B-Instruct")

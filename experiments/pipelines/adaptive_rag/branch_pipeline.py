@@ -14,7 +14,7 @@ Adaptive-RAG 流分支 Pipeline 实现
 
 用法:
     from sage.kernel.api import LocalEnvironment
-    from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag import (
+    from experiments.pipelines.adaptive_rag import (
         build_branching_adaptive_rag_pipeline
     )
 

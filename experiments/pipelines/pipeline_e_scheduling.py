@@ -26,12 +26,15 @@ from enum import Enum
 from typing import Any, Optional
 
 import httpx
+from sage.common.config.ports import SagePorts
 from sage.common.core import (
     MapFunction,
     SinkFunction,
     SourceFunction,
 )
 from sage.kernel.api import FlownetEnvironment
+
+_DEFAULT_LLM_URL = f"http://localhost:{SagePorts.LLM_DEFAULT}/v1"
 
 from ..common.execution_guard import run_pipeline_bounded
 from .scheduler import HeadNodeScheduler
@@ -79,7 +82,7 @@ class SchedulingConfig:
     llm_model: str = "Qwen/Qwen2.5-7B-Instruct"
 
     # 服务端点
-    llm_base_url: str = "http://localhost:8001/v1"
+    llm_base_url: str = _DEFAULT_LLM_URL
 
     # 运行时
     job_manager_host: str = "localhost"
@@ -249,7 +252,7 @@ class SchedulingLLMMapFunction(MapFunction):
 
     def __init__(
         self,
-        llm_base_url: str = "http://localhost:8001/v1",
+        llm_base_url: str = _DEFAULT_LLM_URL,
         llm_model: str = "Qwen/Qwen2.5-7B-Instruct",
         timeout: float = 60.0,
         **kwargs,

@@ -8,6 +8,12 @@
 		},
 		{
 			"path": "../SAGE"
+		},
+		{
+			"path": "../sagellm"
+		},
+		{
+			"path": "../sagellm-control-plane"
 		}
 	],
 	"settings": {}

@@ -1,12 +1,16 @@
 import argparse
 import uuid
 
-from sage.benchmark.benchmark_sage.experiments.common.cli_args import (
+from sage.common.config.ports import SagePorts
+
+_DEFAULT_GATEWAY_URL = f"http://localhost:{SagePorts.GATEWAY_DEFAULT}"
+
+from experiments.common.cli_args import (
     add_common_benchmark_args,
     build_run_config,
     validate_benchmark_args,
 )
-from sage.benchmark.benchmark_sage.experiments.q5_heteroresilience import HeterogeneityExperiment
+from experiments.q5_heteroresilience import HeterogeneityExperiment
 
 
 class ReconfigDrillExperiment(HeterogeneityExperiment):
@@ -31,7 +35,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--rate", type=float, default=10.0, metavar="REQ_S")
     parser.add_argument("--total-requests", type=int, default=100, metavar="N")
     parser.add_argument("--llm-ratio", type=float, default=0.7, metavar="RATIO")
-    parser.add_argument("--gateway", type=str, default="http://localhost:8888", metavar="URL")
+    parser.add_argument("--gateway", type=str, default=_DEFAULT_GATEWAY_URL, metavar="URL")
     return parser
 
 
@@ -39,8 +43,8 @@ def main() -> None:  # pragma: no cover
     import sys
     from pathlib import Path
 
-    from sage.benchmark.benchmark_sage.config.config_loader import ConfigLoader
-    from sage.benchmark.benchmark_sage.experiments.config import WorkloadConfig
+    from config.config_loader import ConfigLoader
+    from experiments.config import WorkloadConfig
 
     parser = _build_parser()
     args = parser.parse_args()

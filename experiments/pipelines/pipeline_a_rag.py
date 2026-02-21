@@ -23,19 +23,23 @@ from enum import Enum
 from typing import Any, Optional
 
 import httpx
+from sage.common.config.ports import SagePorts
 from sage.common.core import (
     FilterFunction,
     MapFunction,
     SinkFunction,
     SourceFunction,
 )
+
+_DEFAULT_EMBEDDING_URL = f"http://localhost:{SagePorts.EMBEDDING_DEFAULT}/v1"
+_DEFAULT_LLM_URL = f"http://localhost:{SagePorts.LLM_DEFAULT}/v1"
 from sage.kernel.api import FlownetEnvironment
 
 try:
     from .scheduler import HeadNodeScheduler
 except ImportError:
     # 直接运行脚本时使用绝对导入
-    from sage.benchmark.benchmark_sage.experiments.pipelines.scheduler import (
+    from experiments.pipelines.scheduler import (
         HeadNodeScheduler,
     )
 
@@ -66,8 +70,8 @@ class RAGConfig:
     llm_model: str = "Qwen/Qwen2.5-7B-Instruct"
 
     # 服务端点
-    embedding_base_url: str = "http://localhost:8090/v1"
-    llm_base_url: str = "http://localhost:8001/v1"
+    embedding_base_url: str = _DEFAULT_EMBEDDING_URL
+    llm_base_url: str = _DEFAULT_LLM_URL
 
     # 运行时
     job_manager_host: str = "localhost"
@@ -171,7 +175,7 @@ class EmbeddingMapFunction(MapFunction):
 
     def __init__(
         self,
-        embedding_base_url: str = "http://localhost:8090/v1",
+        embedding_base_url: str = _DEFAULT_EMBEDDING_URL,
         embedding_model: str = "BAAI/bge-large-en-v1.5",
         timeout: float = 60.0,
         **kwargs,
@@ -182,7 +186,7 @@ class EmbeddingMapFunction(MapFunction):
         self.timeout = timeout
 
     def execute(self, data: dict) -> dict:
-        """执行 embedding"""
+        """执行 embedding""
         query = data["query"]
 
         with httpx.Client(timeout=self.timeout, proxy=None) as client:
@@ -209,7 +213,7 @@ class RetrievalMapFunction(MapFunction):
         self,
         retrieval_mode: str = "hybrid",
         top_k: int = 5,
-        embedding_base_url: str = "http://localhost:8090/v1",
+        embedding_base_url: str = _DEFAULT_EMBEDDING_URL,
         embedding_model: str = "BAAI/bge-large-en-v1.5",
         timeout: float = 60.0,
         **kwargs,
@@ -366,7 +370,7 @@ class LLMGenerateMapFunction(MapFunction):
 
     def __init__(
         self,
-        llm_base_url: str = "http://localhost:8001/v1",
+        llm_base_url: str = _DEFAULT_LLM_URL,
         llm_model: str = "Qwen/Qwen2.5-7B-Instruct",
         timeout: float = 60.0,
         **kwargs,

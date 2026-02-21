@@ -36,12 +36,15 @@ os.environ.pop("https_proxy", None)
 os.environ.pop("HTTPS_PROXY", None)
 
 import httpx
+from sage.common.config.ports import SagePorts
 from sage.common.core import (
     FilterFunction,
     MapFunction,
     SinkFunction,
     SourceFunction,
 )
+
+_DEFAULT_EMBEDDING_URL = f"http://localhost:{SagePorts.EMBEDDING_DEFAULT}/v1"
 from sage.kernel.api import FlownetEnvironment
 
 from ..common.execution_guard import run_pipeline_bounded
@@ -86,7 +89,7 @@ class VectorJoinConfig:
     topk: int = 5
 
     # 服务端点
-    embedding_base_url: str = "http://localhost:8090/v1"
+    embedding_base_url: str = _DEFAULT_EMBEDDING_URL
 
     # 运行时
     job_manager_host: str = "localhost"
@@ -206,7 +209,7 @@ class StreamEmbeddingMapFunction(MapFunction):
 
     def __init__(
         self,
-        embedding_base_url: str = "http://localhost:8090/v1",
+        embedding_base_url: str = _DEFAULT_EMBEDDING_URL,
         embedding_model: str = "BAAI/bge-large-en-v1.5",
         timeout: float = 60.0,
         **kwargs,

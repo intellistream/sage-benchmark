@@ -24,7 +24,7 @@ def example_basic_usage():
     print("示例 1: Adaptive-RAG 基本用法")
     print("=" * 60)
 
-    from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag import (
+    from experiments.pipelines.adaptive_rag import (
         QueryComplexityClassifier,
         QueryComplexityLevel,
     )
@@ -71,8 +71,8 @@ def example_pipeline_run():
     print("示例 2: Adaptive-RAG Pipeline 执行")
     print("=" * 60)
 
-    from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag import AdaptiveRAGPipeline
-    from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag.pipeline import (
+    from experiments.pipelines.adaptive_rag import AdaptiveRAGPipeline
+    from experiments.pipelines.adaptive_rag.pipeline import (
         PipelineConfig,
     )
 
@@ -139,7 +139,7 @@ def example_custom_classifier():
     print("示例 3: 自定义分类器")
     print("=" * 60)
 
-    from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag.classifier import (
+    from experiments.pipelines.adaptive_rag.classifier import (
         BaseClassifier,
         ClassificationResult,
         QueryComplexityLevel,
@@ -195,7 +195,7 @@ def example_strategy_functions():
     print("示例 4: 策略函数独立使用")
     print("=" * 60)
 
-    from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag.functions import (
+    from experiments.pipelines.adaptive_rag.functions import (
         IterativeRetrieverFunction,
         NoRetrievalFunction,
         SimpleRetriever,
@@ -263,7 +263,7 @@ def example_batch_processing():
     print("示例 5: 批量处理")
     print("=" * 60)
 
-    from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag import AdaptiveRAGPipeline
+    from experiments.pipelines.adaptive_rag import AdaptiveRAGPipeline
 
     class MockLLM:
         def chat(self, prompt):
@@ -315,7 +315,7 @@ Adaptive-RAG 可以无缝集成到 SAGE 数据流系统中:
 
 ```python
 from sage.kernel import StreamExecutionEnvironment
-from sage.benchmark.benchmark_sage.experiments.pipelines.adaptive_rag import (
+from experiments.pipelines.adaptive_rag import (
     AdaptiveRAGPipeline, build_sage_pipeline
 )
 

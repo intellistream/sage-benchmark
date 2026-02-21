@@ -24,7 +24,7 @@ Usage example
 .. code-block:: python
 
     import argparse
-    from sage.benchmark.benchmark_sage.experiments.common.cli_args import (
+    from experiments.common.cli_args import (
         add_common_benchmark_args,
         validate_benchmark_args,
         build_run_config,

@@ -19,23 +19,23 @@ from importlib import metadata
 from pathlib import Path
 
 import numpy as np
-from sage.benchmark.benchmark_sage.experiments.common import RequestResult
-from sage.benchmark.benchmark_sage.experiments.common.component_versions import (
+from experiments.common import RequestResult
+from experiments.common.component_versions import (
     collect_component_versions,
     resolve_first_installed_version,
 )
-from sage.benchmark.benchmark_sage.experiments.common.metrics_schema import (
+from experiments.common.metrics_schema import (
     UnifiedMetricsRecord,
     compute_backend_hash,
     compute_config_hash,
 )
-from sage.benchmark.benchmark_sage.experiments.common.result_writer import (
+from experiments.common.result_writer import (
     append_jsonl_record,
     export_jsonl_to_csv,
 )
-from sage.benchmark.benchmark_sage.experiments.common.system_profile import collect_system_profile
-from sage.benchmark.benchmark_sage.experiments.config import ExperimentConfig
-from sage.benchmark.benchmark_sage.experiments.plotting import Plotter
+from experiments.common.system_profile import collect_system_profile
+from experiments.config import ExperimentConfig
+from experiments.plotting import Plotter
 
 try:
     from _version import __version__ as BENCHMARK_VERSION

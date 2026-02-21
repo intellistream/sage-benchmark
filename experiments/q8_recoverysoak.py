@@ -1,12 +1,16 @@
 import argparse
 import uuid
 
-from sage.benchmark.benchmark_sage.experiments.common.cli_args import (
+from sage.common.config.ports import SagePorts
+
+_DEFAULT_GATEWAY_URL = f"http://localhost:{SagePorts.GATEWAY_DEFAULT}"
+
+from experiments.common.cli_args import (
     add_common_benchmark_args,
     build_run_config,
     validate_benchmark_args,
 )
-from sage.benchmark.benchmark_sage.experiments.q3_noisyneighbor import IsolationExperiment
+from experiments.q3_noisyneighbor import IsolationExperiment
 
 
 class RecoverySoakExperiment(IsolationExperiment):
@@ -36,7 +40,7 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="SECONDS",
         help="Experiment duration in seconds (default: 30).",
     )
-    parser.add_argument("--gateway", type=str, default="http://localhost:8888", metavar="URL")
+    parser.add_argument("--gateway", type=str, default=_DEFAULT_GATEWAY_URL, metavar="URL")
     return parser
 
 
@@ -44,7 +48,7 @@ def main() -> None:  # pragma: no cover
     import sys
     from pathlib import Path
 
-    from sage.benchmark.benchmark_sage.config.config_loader import ConfigLoader
+    from config.config_loader import ConfigLoader
 
     parser = _build_parser()
     args = parser.parse_args()

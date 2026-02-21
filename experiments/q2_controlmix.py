@@ -3,12 +3,16 @@ import asyncio
 import time
 import uuid
 
-from sage.benchmark.benchmark_sage.experiments.base_experiment import BaseExperiment
-from sage.benchmark.benchmark_sage.experiments.common import (
+from sage.common.config.ports import SagePorts
+
+_DEFAULT_GATEWAY_URL = f"http://localhost:{SagePorts.GATEWAY_DEFAULT}"
+
+from experiments.base_experiment import BaseExperiment
+from experiments.common import (
     BenchmarkClient,
     WorkloadGenerator,
 )
-from sage.benchmark.benchmark_sage.experiments.common.cli_args import (
+from experiments.common.cli_args import (
     add_common_benchmark_args,
     build_run_config,
     validate_benchmark_args,
@@ -151,9 +155,9 @@ Examples:
     parser.add_argument(
         "--gateway",
         type=str,
-        default="http://localhost:8888",
+        default=_DEFAULT_GATEWAY_URL,
         metavar="URL",
-        help="Gateway URL used when backend=sage (default: http://localhost:8888).",
+        help=f"Gateway URL used when backend=sage (default: {_DEFAULT_GATEWAY_URL}).",
     )
     return parser
 
@@ -163,8 +167,8 @@ def main() -> None:  # pragma: no cover
     import sys
     from pathlib import Path
 
-    from sage.benchmark.benchmark_sage.config.config_loader import ConfigLoader
-    from sage.benchmark.benchmark_sage.experiments.config import WorkloadConfig
+    from config.config_loader import ConfigLoader
+    from experiments.config import WorkloadConfig
 
     parser = _build_parser()
     args = parser.parse_args()

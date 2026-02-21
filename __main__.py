@@ -88,7 +88,7 @@ def _resolve_default_config_path(base_dir: Path, canonical_q: str) -> Path | Non
 
 def main() -> int:
     # Import here so --help is fast even without heavy deps installed.
-    from sage.benchmark.benchmark_sage.experiments.common.cli_args import (
+    from experiments.common.cli_args import (
         add_common_benchmark_args,
         build_run_config,
         validate_benchmark_args,
@@ -144,19 +144,19 @@ Examples:
     validate_benchmark_args(args)
 
     # Import here to avoid slow startup for --help
-    from sage.benchmark.benchmark_sage.config.config_loader import ConfigLoader
-    from sage.benchmark.benchmark_sage.experiments.q1_pipelinechain import E2EPipelineExperiment
-    from sage.benchmark.benchmark_sage.experiments.q2_controlmix import ControlPlaneExperiment
-    from sage.benchmark.benchmark_sage.experiments.q3_noisyneighbor import IsolationExperiment
-    from sage.benchmark.benchmark_sage.experiments.q4_scalefrontier import ScalabilityExperiment
-    from sage.benchmark.benchmark_sage.experiments.q5_heteroresilience import (
+    from config.config_loader import ConfigLoader
+    from experiments.q1_pipelinechain import E2EPipelineExperiment
+    from experiments.q2_controlmix import ControlPlaneExperiment
+    from experiments.q3_noisyneighbor import IsolationExperiment
+    from experiments.q4_scalefrontier import ScalabilityExperiment
+    from experiments.q5_heteroresilience import (
         HeterogeneityExperiment,
     )
-    from sage.benchmark.benchmark_sage.experiments.q6_bursttown import BurstTownExperiment
-    from sage.benchmark.benchmark_sage.experiments.q7_reconfigdrill import (
+    from experiments.q6_bursttown import BurstTownExperiment
+    from experiments.q7_reconfigdrill import (
         ReconfigDrillExperiment,
     )
-    from sage.benchmark.benchmark_sage.experiments.q8_recoverysoak import RecoverySoakExperiment
+    from experiments.q8_recoverysoak import RecoverySoakExperiment
 
     experiment_map = {
         "Q1": E2EPipelineExperiment,
