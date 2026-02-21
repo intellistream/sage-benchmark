@@ -43,7 +43,10 @@ except Exception:
     BENCHMARK_VERSION = "unknown"
 
 try:
-    SAGE_VERSION = metadata.version("isage")
+    SAGE_VERSION = resolve_first_installed_version(
+        ["isage", "sage"],
+        default="unknown",
+    )
 except Exception:
     SAGE_VERSION = "unknown"
 
@@ -305,6 +308,18 @@ class BaseExperiment(ABC):
             "config": self._config_to_dict(),
         }
 
+        component_versions = collect_component_versions()
+        resolved_sage_version = (
+            SAGE_VERSION
+            if SAGE_VERSION != "unknown"
+            else component_versions.get("isage", "unknown")
+        )
+        resolved_sagellm_version = (
+            SAGELLM_VERSION
+            if SAGELLM_VERSION != "unknown"
+            else component_versions.get("isagellm", "unknown")
+        )
+
         record = UnifiedMetricsRecord(
             backend=backend,
             workload=workload,
@@ -323,13 +338,13 @@ class BaseExperiment(ABC):
             backend_hash=compute_backend_hash(backend),
             metadata={
                 "experiment_name": result.experiment_name,
-                "sage_version": SAGE_VERSION,
-                "sagellm_version": SAGELLM_VERSION,
+                "sage_version": resolved_sage_version,
+                "sagellm_version": resolved_sagellm_version,
                 "benchmark_version": BENCHMARK_VERSION,
                 "model_name": self.config.llm_model.name,
                 "embedding_model_name": self.config.embedding_model.name,
                 "system_profile": collect_system_profile(),
-                "component_versions": collect_component_versions(),
+                "component_versions": component_versions,
                 "total_requests": result.total_requests,
                 "successful_requests": result.successful_requests,
                 "failed_requests": result.failed_requests,

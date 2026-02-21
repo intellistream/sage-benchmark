@@ -52,7 +52,10 @@ except Exception:
     BENCHMARK_VERSION = "unknown"
 
 try:
-    SAGE_VERSION = metadata.version("isage")
+    SAGE_VERSION = resolve_first_installed_version(
+        ["isage", "sage"],
+        default="unknown",
+    )
 except Exception:
     SAGE_VERSION = "unknown"
 
@@ -148,6 +151,16 @@ def build_unified_record(
 ) -> UnifiedMetricsRecord:
     """Build a unified metrics record from backend run output."""
     throughput = results_count / elapsed_time if elapsed_time > 0 else None
+    component_versions = collect_component_versions()
+    resolved_sage_version = (
+        SAGE_VERSION if SAGE_VERSION != "unknown" else component_versions.get("isage", "unknown")
+    )
+    resolved_sagellm_version = (
+        SAGELLM_VERSION
+        if SAGELLM_VERSION != "unknown"
+        else component_versions.get("isagellm", "unknown")
+    )
+
     return UnifiedMetricsRecord(
         backend=backend,
         workload=workload,
@@ -165,13 +178,13 @@ def build_unified_record(
         backend_hash=compute_backend_hash(backend),
         metadata={
             "scheduler_name": scheduler_name,
-            "sage_version": SAGE_VERSION,
-            "sagellm_version": SAGELLM_VERSION,
+            "sage_version": resolved_sage_version,
+            "sagellm_version": resolved_sagellm_version,
             "benchmark_version": BENCHMARK_VERSION,
-            "model_name": "unknown",
-            "embedding_model_name": "unknown",
+            "model_name": None,
+            "embedding_model_name": None,
             "system_profile": collect_system_profile(),
-            "component_versions": collect_component_versions(),
+            "component_versions": component_versions,
             "results_count": results_count,
             "raw_metrics": raw_metrics,
         },
