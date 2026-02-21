@@ -36,7 +36,7 @@ if str(_EXPERIMENTS_DIR) not in sys.path:
 # Register available backends (import triggers @register_runner decoration)
 import backends.sage_runner  # noqa: F401  registers "sage"
 from backends.base import WorkloadSpec, get_runner, list_backends
-from common.component_versions import collect_component_versions
+from common.component_versions import collect_component_versions, resolve_first_installed_version
 from common.metrics_schema import (
     UnifiedMetricsRecord,
     compute_backend_hash,
@@ -57,7 +57,10 @@ except Exception:
     SAGE_VERSION = "unknown"
 
 try:
-    SAGELLM_VERSION = metadata.version("isagellm")
+    SAGELLM_VERSION = resolve_first_installed_version(
+        ["isagellm", "sagellm", "sagellm-gateway"],
+        default="unknown",
+    )
 except Exception:
     SAGELLM_VERSION = "unknown"
 

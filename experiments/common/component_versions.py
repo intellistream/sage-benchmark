@@ -37,3 +37,31 @@ def collect_component_versions() -> dict[str, str]:
         versions[package] = installed.get(package, "not-installed")
 
     return versions
+
+
+def resolve_first_installed_version(
+    candidates: list[str],
+    *,
+    default: str = "unknown",
+) -> str:
+    """Resolve the first installed package version from candidate names.
+
+    Args:
+        candidates: Ordered distribution name candidates.
+        default: Returned when none of the candidates is installed.
+
+    Returns:
+        Installed version string for the first matched candidate, else ``default``.
+    """
+    installed: dict[str, str] = {}
+    for dist in metadata.distributions():
+        name = (dist.metadata.get("Name") or "").strip().lower()
+        if name:
+            installed[name] = dist.version
+
+    for candidate in candidates:
+        version = installed.get(candidate.strip().lower())
+        if version:
+            return version
+
+    return default
