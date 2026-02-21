@@ -1,181 +1,104 @@
 #!/bin/bash
-# sage-benchmark Quickstart Script
-# Sets up development environment and git hooks
+# 🚀 SAGE Benchmark 快速初始化脚本
+# 自动初始化所有 Git 子模块
 
 set -e
 
-# Colors
+# 颜色定义
 RED='\033[0;31m'
-YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
-CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-BOLD='\033[1m'
-NC='\033[0m'
+NC='\033[0m' # No Color
+DIM='\033[2m'
 
-# Print banner
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}${BLUE}   _____ ___   ________________    ____                  __  ${NC}"
-echo -e "${BOLD}${BLUE}  / ___//   | / ____/ ____/  _/   / __ )___  ____  _____/ /_ ${NC}"
-echo -e "${BOLD}${BLUE}  \\__ \\/ /| |/ / __/ __/  / /_____/ __  / _ \\/ __ \\/ ___/ __ \\ ${NC}"
-echo -e "${BOLD}${BLUE} ___/ / ___ / /_/ / /____/ /_____/ /_/ /  __/ / / / /__/ / / /${NC}"
-echo -e "${BOLD}${BLUE}/____/_/  |_\\____/_____/___/    /_____/\\___/_/ /_/\\___/_/ /_/ ${NC}"
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}${BOLD}SAGE Benchmark Quickstart Setup${NC}"
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-
-# Detect project root
+# 获取脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"
 
-echo -e "${BLUE}📂 Project root: ${NC}$PROJECT_ROOT"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}  🚀 SAGE Benchmark 快速初始化${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-# Parse command line arguments
-DEV_MODE=false
-SKIP_HOOKS=false
-
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --dev)
-            DEV_MODE=true
-            shift
-            ;;
-        --skip-hooks)
-            SKIP_HOOKS=true
-            shift
-            ;;
-        --help)
-            echo "Usage: ./quickstart.sh [OPTIONS]"
-            echo ""
-            echo "Options:"
-            echo "  --dev          Install development dependencies"
-            echo "  --skip-hooks   Skip git hooks installation"
-            echo "  --help         Show this help message"
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Unknown option: $1${NC}"
-            exit 1
-            ;;
-    esac
-done
-
-# Step 1: Install git hooks (unless --skip-hooks)
-if [ "$SKIP_HOOKS" = false ]; then
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${YELLOW}${BOLD}Step 1: Installing Git Hooks${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-
-    HOOKS_DIR="$PROJECT_ROOT/.git/hooks"
-    TEMPLATE_DIR="$PROJECT_ROOT/hooks"
-
-    if [ ! -d "$HOOKS_DIR" ]; then
-        echo -e "${RED}✗ Git repository not initialized${NC}"
-        echo -e "${YELLOW}Run: git init${NC}"
-        exit 1
-    fi
-
-    # Install pre-commit hook
-    if [ -f "$TEMPLATE_DIR/pre-commit" ]; then
-        cp "$TEMPLATE_DIR/pre-commit" "$HOOKS_DIR/pre-commit"
-        chmod +x "$HOOKS_DIR/pre-commit"
-        echo -e "${GREEN}✓ Installed pre-commit hook${NC}"
-    fi
-
-    # Install pre-push hook
-    if [ -f "$TEMPLATE_DIR/pre-push" ]; then
-        cp "$TEMPLATE_DIR/pre-push" "$HOOKS_DIR/pre-push"
-        chmod +x "$HOOKS_DIR/pre-push"
-        echo -e "${GREEN}✓ Installed pre-push hook${NC}"
-    fi
-
-    echo ""
-else
-    echo -e "${YELLOW}⊘ Skipping git hooks installation${NC}"
-    echo ""
-fi
-
-# Step 2: Install Python dependencies
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${YELLOW}${BOLD}Step 2: Installing Python Dependencies${NC}"
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-
-# Check Python version
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
-REQUIRED_VERSION="3.10"
-
-if ! python3 -c "import sys; exit(0 if sys.version_info >= (3, 10) else 1)"; then
-    echo -e "${RED}✗ Python 3.10+ required, found $PYTHON_VERSION${NC}"
+# 检查是否在正确的目录
+if [ ! -f "$SCRIPT_DIR/pyproject.toml" ]; then
+    echo -e "${RED}❌ 错误: 请在 sage-benchmark 根目录运行此脚本${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}✓ Python version check passed: $PYTHON_VERSION${NC}"
+# 检查 git 是否安装
+if ! command -v git &> /dev/null; then
+    echo -e "${RED}❌ 错误: 未安装 git${NC}"
+    echo -e "${DIM}请安装 git: sudo apt-get install git${NC}"
+    exit 1
+fi
+
+# 检查是否是 git 仓库
+if [ ! -d "$SCRIPT_DIR/.git" ]; then
+    echo -e "${RED}❌ 错误: 当前目录不是 git 仓库${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ 环境检查通过${NC}"
 echo ""
 
-# Install package
-if [ "$DEV_MODE" = true ]; then
-    echo -e "${BLUE}Installing with development dependencies...${NC}"
-    pip install -e ".[dev]"
+# 避免 Git LFS 自动拉取大文件
+if [ -z "${GIT_LFS_SKIP_SMUDGE+x}" ]; then
+    export GIT_LFS_SKIP_SMUDGE=1
+    echo -e "${DIM}已设置 GIT_LFS_SKIP_SMUDGE=1 (跳过 LFS 大文件)${NC}"
+fi
+
+# 初始化子模块
+echo -e "${BLUE}🔄 初始化 Git 子模块...${NC}"
+echo -e "${DIM}将初始化以下子模块:${NC}"
+echo -e "${DIM}  - src/sage/benchmark/benchmark_amm  (LibAMM)${NC}"
+echo -e "${DIM}  - src/sage/benchmark/benchmark_anns (SAGE-DB-Bench)${NC}"
+echo -e "${DIM}  - src/sage/data                      (sageData)${NC}"
+echo ""
+
+cd "$SCRIPT_DIR"
+
+# 初始化子模块（并行加速）
+if git submodule status | grep -q '^-'; then
+    echo -e "${YELLOW}⚙️  初始化未初始化的子模块...${NC}"
+    git submodule update --init --jobs 4
+    echo -e "${GREEN}✓ 子模块初始化完成${NC}"
 else
-    echo -e "${BLUE}Installing core package...${NC}"
-    pip install -e .
+    echo -e "${GREEN}✓ 子模块已初始化${NC}"
+
+    # 检查是否需要更新
+    echo -e "${BLUE}🔄 检查子模块更新...${NC}"
+    git submodule update --jobs 4
+    echo -e "${GREEN}✓ 子模块已更新${NC}"
 fi
 
 echo ""
-echo -e "${GREEN}✓ Python dependencies installed${NC}"
-echo ""
 
-# Step 3: Check SAGE installation
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${YELLOW}${BOLD}Step 3: Checking SAGE Dependencies${NC}"
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+# 显示子模块状态
+echo -e "${BLUE}📊 子模块状态:${NC}"
+git submodule status | while read status; do
+    commit=$(echo $status | awk '{print $1}')
+    path=$(echo $status | awk '{print $2}')
+    branch=$(echo $status | awk '{print $3}' | sed 's/[()]//g')
 
-if python3 -c "import sage.common" 2>/dev/null; then
-    echo -e "${GREEN}✓ sage.common (L1) found${NC}"
-else
-    echo -e "${RED}✗ sage.common (L1) not found${NC}"
-    echo -e "${YELLOW}Please install SAGE first: pip install isage-common${NC}"
-fi
-
-if python3 -c "import sage.kernel" 2>/dev/null; then
-    echo -e "${GREEN}✓ sage.kernel (L3) found${NC}"
-else
-    echo -e "${RED}✗ sage.kernel (L3) not found${NC}"
-    echo -e "${YELLOW}Please install SAGE: pip install isage-kernel${NC}"
-fi
-
-if python3 -c "import sage.libs" 2>/dev/null; then
-    echo -e "${GREEN}✓ sage.libs (L3) found${NC}"
-else
-    echo -e "${RED}✗ sage.libs (L3) not found${NC}"
-    echo -e "${YELLOW}Please install SAGE: pip install isage-libs${NC}"
-fi
-
-if python3 -c "import sage.middleware" 2>/dev/null; then
-    echo -e "${GREEN}✓ sage.middleware (L4) found${NC}"
-else
-    echo -e "${RED}✗ sage.middleware (L4) not found${NC}"
-    echo -e "${YELLOW}Please install SAGE: pip install isage-middleware${NC}"
-fi
+    if [[ $commit == -* ]]; then
+        echo -e "${YELLOW}  ⚠️  $path - 未初始化${NC}"
+    elif [[ $commit == +* ]]; then
+        echo -e "${YELLOW}  ⚠️  $path - 未提交的更改${NC}"
+    else
+        echo -e "${GREEN}  ✓ $path - $branch${NC}"
+    fi
+done
 
 echo ""
-
-# Step 4: Summary
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}${BOLD}✓ Setup Complete!${NC}"
-echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✨ 初始化完成！${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-echo -e "${BOLD}Next Steps:${NC}"
-echo -e "  1. Run experiments: ${CYAN}python -m sage_benchmark${NC}"
-echo -e "  2. View configuration: ${CYAN}ls config/\*.yaml${NC}"
-echo -e "  3. Check documentation: ${CYAN}cat README.md${NC}"
+echo -e "${DIM}下一步:${NC}"
+echo -e "  1. 安装依赖: ${BLUE}pip install -e .${NC}"
+echo -e "  2. 或使用虚拟环境: ${BLUE}python -m venv venv && source venv/bin/activate && pip install -e .${NC}"
 echo ""
-echo -e "${BOLD}Development Commands:${NC}"
-echo -e "  • Run tests: ${CYAN}pytest${NC}"
-echo -e "  • Format code: ${CYAN}ruff format .${NC}"
-echo -e "  • Lint code: ${CYAN}ruff check .${NC}"
-echo ""
-echo -e "${GREEN}Happy benchmarking! 🚀${NC}"
+echo -e "${DIM}运行测试:${NC}"
+echo -e "  ${BLUE}pytest tests/${NC}"
 echo ""

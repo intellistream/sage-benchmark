@@ -1,291 +1,325 @@
-# Contributing to sage-benchmark
+# Contributing to SAGE Benchmark
 
-Thank you for your interest in contributing to sage-benchmark! This document provides guidelines for contributing to the SAGE framework-specific benchmark repository.
+Thank you for your interest in contributing to SAGE Benchmark! This document provides guidelines and best practices for contributing to the project.
 
-## 🎯 Project Scope
+## Table of Contents
 
-**sage-benchmark** is dedicated to SAGE framework-specific system-level benchmarks and experiments, complementary to OmniBenchmark (organization-level benchmark collection).
+- [Development Setup](#development-setup)
+- [Code Quality Standards](#code-quality-standards)
+- [Pre-commit Hooks](#pre-commit-hooks)
+- [Testing](#testing)
+- [Submitting Changes](#submitting-changes)
 
-### What Goes Here
+## Development Setup
 
-- ✅ End-to-end SAGE system experiments
-- ✅ Control Plane scheduling benchmarks
-- ✅ Multi-component pipeline benchmarks
-- ✅ ICML artifacts and experiment configs
-- ✅ SAGE framework validation benchmarks
-
-### What Goes Elsewhere
-
-- ❌ Generic benchmarks → [OmniBenchmark](https://github.com/intellistream/OmniBenchmark)
-- ❌ Agent-specific benchmarks → [sage-agent-benchmark](https://github.com/intellistream/sage-agent-benchmark)
-- ❌ Core SAGE components → [SAGE](https://github.com/intellistream/SAGE)
-- ❌ Application examples → [sage-examples](https://github.com/intellistream/sage-examples)
-
-## 📋 Prerequisites
-
-Before contributing, ensure:
-
-1. **Python 3.10+** installed
-2. **SAGE framework** installed from PyPI:
-   ```bash
-   pip install isage-common isage-kernel isage-libs isage-middleware
-   ```
-3. **Git** configured with your name and email
-
-## 🚀 Getting Started
-
-### 1. Fork and Clone
+### 1. Clone the Repository
 
 ```bash
-# Fork the repository on GitHub
-# Clone your fork
-git clone https://github.com/YOUR_USERNAME/sage-benchmark.git
+git clone https://github.com/intellistream/sage-benchmark.git
 cd sage-benchmark
+./quickstart.sh  # Initialize git submodules
 ```
 
-### 2. Set Up Development Environment
+### 2. Set Up Python Environment
 
 ```bash
-# Run quickstart script
-./quickstart.sh --dev
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Or manually install
+# Install dependencies
 pip install -e ".[dev]"
 ```
 
-### 3. Create a Branch
+### 3. Install Pre-commit Hooks
+
+**IMPORTANT**: Always install pre-commit hooks before making commits:
 
 ```bash
-git checkout -b feature/your-feature-name
+pre-commit install
 ```
 
-## 🔧 Development Workflow
+This ensures your code is automatically checked for style issues before each commit.
+
+#### Why isn't this automatic?
+
+**Q: Why doesn't CI/CD automatically install pre-commit hooks?**
+
+A: CI/CD runs in a temporary environment and uses pre-commit hooks to validate code. However, on your local machine, you must manually run `pre-commit install` because:
+
+1. **Security**: Git hooks can execute arbitrary code, so they require explicit user consent
+2. **User control**: Developers may have different workflows or prefer to run checks manually
+3. **Git design**: Git hooks are not part of the repository itself (they live in `.git/hooks/`)
+
+**The workflow is:**
+- **CI/CD**: Runs `pre-commit run --all-files` to validate your PR
+- **Local**: You run `pre-commit install` once, then hooks run automatically on `git commit`
+
+If you forget to install pre-commit locally, CI/CD will catch issues, but it's faster to catch them before pushing!
+
+## Code Quality Standards
+
+SAGE Benchmark follows strict code quality standards:
+
+- **Python Version**: 3.10+
+- **Formatter**: Black (line length: 100)
+- **Import Sorting**: isort (black profile)
+- **Linter**: Ruff
+- **Type Hints**: Required for all public APIs
+- **Docstrings**: Google style
 
 ### Code Style
 
-We follow SAGE's unified code style:
+```python
+"""Module docstring describing purpose."""
 
-- **Formatter**: Ruff (line length 100)
-- **Linter**: Ruff
-- **Type checker**: Mypy (warning mode)
+from __future__ import annotations
 
-```bash
-# Auto-format code
-ruff format .
+from pathlib import Path
+from typing import Any
 
-# Check code
-ruff check .
+def example_function(config: dict[str, Any], output_dir: Path) -> dict[str, float]:
+    """Brief description.
 
-# Type check
-mypy .
+    Args:
+        config: Configuration dictionary
+        output_dir: Directory to save results
+
+    Returns:
+        Dictionary of results
+
+    Raises:
+        ValueError: If configuration is invalid
+    """
+    # Implementation
+    pass
 ```
 
-### Testing
+## Pre-commit Hooks
+
+We use [pre-commit](https://pre-commit.com/) to ensure code quality. The hooks run automatically before each commit and include:
+
+1. **trailing-whitespace**: Remove trailing whitespace
+2. **end-of-file-fixer**: Ensure files end with newline
+3. **check-yaml**: Validate YAML syntax
+4. **check-json**: Validate JSON syntax
+5. **check-added-large-files**: Prevent large files
+6. **check-merge-conflict**: Detect merge conflict markers
+7. **detect-private-key**: Prevent committing private keys
+8. **black**: Format Python code
+9. **isort**: Sort imports
+10. **ruff-check**: Lint and auto-fix Python code
+
+**Important**: When ruff auto-fixes files, pre-commit will fail with "files were modified by this hook". This is **expected behavior** - simply re-run the commit command and it will succeed:
+
+```bash
+git commit -m "your message"
+# If ruff fixes files, you'll see: "ruff-check...Failed - files were modified"
+# Just commit again:
+git commit -m "your message"
+# Now it will pass
+```
+
+### Manual Pre-commit Checks
+
+Run pre-commit on all files:
+
+```bash
+pre-commit run --all-files
+```
+
+Run pre-commit on specific files:
+
+```bash
+pre-commit run --files path/to/file.py
+```
+
+Update pre-commit hooks to latest versions:
+
+```bash
+pre-commit autoupdate
+```
+
+### Fixing Common Issues
+
+#### Ruff Auto-Fix Workflow
+
+When ruff auto-fixes files during commit, follow this workflow:
+
+```bash
+# First commit attempt - ruff fixes files
+git commit -m "your message"
+# Output: "ruff-check...Failed - files were modified by this hook"
+
+# Ruff has fixed the files, now commit again
+git commit -m "your message"
+# Output: All checks pass! ✅
+```
+
+This is normal pre-commit behavior and ensures all fixes are included in your commit.
+
+#### Import Sorting Errors
+
+If CI reports isort errors:
+
+```bash
+isort --profile black .
+```
+
+Or let pre-commit fix them:
+
+```bash
+pre-commit run isort --all-files
+```
+
+#### Formatting Errors
+
+If CI reports Black formatting errors:
+
+```bash
+black --line-length 100 .
+```
+
+#### Linting Errors
+
+If CI reports Ruff errors that can't be auto-fixed:
+
+```bash
+# Auto-fix what's possible
+ruff check --fix .
+
+# See remaining issues
+ruff check .
+```
+
+## Testing
+
+### Running Tests
 
 ```bash
 # Run all tests
 pytest
 
+# Run specific test file
+pytest tests/test_example.py
+
 # Run with coverage
-pytest --cov=sage_benchmark
+pytest --cov=sage.benchmark --cov-report=html
 ```
 
-### Git Hooks
+### Writing Tests
 
-Git hooks are automatically installed by `quickstart.sh` to enforce:
-- Code formatting (pre-commit)
-- Linting (pre-commit)
-- Test passing (pre-push)
+- Place tests in `tests/` directory mirroring `src/` structure
+- Name test files `test_*.py`
+- Use descriptive test names: `test_<functionality>_<expected_behavior>`
+- Aim for >80% code coverage
 
-## 📝 Adding New Benchmarks
-
-### Structure
-
-```
-experiments/
-├── exp_X_Y_<name>.py        # Experiment implementation
-├── <category>/              # Category-specific experiments
-│   ├── __init__.py
-│   └── experiment.py
-config/
-├── exp_X_Y.yaml             # Experiment configuration
-docs/
-├── exp_X_Y_design.md        # Design document
-```
-
-### Experiment Template
+Example:
 
 ```python
-"""
-Experiment X.Y: Brief description
+import pytest
+from sage.benchmark.example import ExampleClass
 
-This experiment measures/validates [what it does].
-"""
+def test_example_basic_functionality():
+    """Test basic functionality of ExampleClass."""
+    obj = ExampleClass(config={"key": "value"})
+    result = obj.run()
 
-from typing import Any
-import yaml
-from pathlib import Path
-
-class ExperimentXY:
-    """Brief description of experiment."""
-    
-    def __init__(self, config_path: Path):
-        """Initialize experiment with configuration."""
-        with open(config_path) as f:
-            self.config = yaml.safe_load(f)
-    
-    def setup(self) -> None:
-        """Set up experiment environment."""
-        pass
-    
-    def run(self) -> dict[str, Any]:
-        """Run experiment and return results."""
-        pass
-    
-    def teardown(self) -> None:
-        """Clean up experiment resources."""
-        pass
-
-def main():
-    """CLI entry point."""
-    import typer
-    app = typer.Typer()
-    
-    @app.command()
-    def run(config: Path = Path("config/exp_X_Y.yaml")):
-        """Run experiment."""
-        exp = ExperimentXY(config)
-        exp.setup()
-        results = exp.run()
-        exp.teardown()
-        print(results)
-    
-    app()
-
-if __name__ == "__main__":
-    main()
+    assert result.status == "success"
+    assert len(result.data) > 0
 ```
 
-## 📤 Submitting Changes
+## Submitting Changes
 
-### Commit Messages
-
-Follow conventional commit format:
-
-```
-<type>(<scope>): <summary>
-
-<body>
-
-<footer>
-```
-
-**Types**: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `ci`, `chore`
-
-**Examples**:
-```bash
-feat(exp5.1): Add end-to-end pipeline benchmark
-fix(config): Correct YAML parsing error
-docs(README): Update installation instructions
-```
-
-### Pull Request Process
-
-1. **Update documentation** if needed
-2. **Add tests** for new functionality
-3. **Update CHANGELOG.md** with your changes
-4. **Ensure all checks pass**:
-   - Code formatting
-   - Linting
-   - Type checking
-   - Tests
-5. **Create pull request** with:
-   - Clear title and description
-   - Reference to related issues
-   - Screenshots/results if applicable
-
-### PR Checklist
-
-- [ ] Code follows style guidelines
-- [ ] Tests added/updated
-- [ ] Documentation updated
-- [ ] CHANGELOG.md updated
-- [ ] Commit messages follow convention
-- [ ] All CI checks pass
-
-## 🐛 Reporting Bugs
-
-Use GitHub Issues with the bug template:
-
-1. **Clear title**: Brief description of the bug
-2. **Environment**: OS, Python version, SAGE version
-3. **Steps to reproduce**: Minimal example
-4. **Expected behavior**: What should happen
-5. **Actual behavior**: What actually happens
-6. **Logs**: Error messages and stack traces
-
-## 💡 Requesting Features
-
-Use GitHub Issues with the feature template:
-
-1. **Clear title**: Brief feature description
-2. **Problem**: What problem does it solve?
-3. **Proposed solution**: How should it work?
-4. **Alternatives**: Other approaches considered
-5. **Use case**: Example scenario
-
-## 🎓 Resources
-
-- **SAGE Documentation**: https://sage.intellistream.com
-- **SAGE Repository**: https://github.com/intellistream/SAGE
-- **OmniBenchmark**: https://github.com/intellistream/OmniBenchmark
-- **Copilot Instructions**: `.github/copilot-instructions.md`
-
-## 📜 Code of Conduct
-
-- Be respectful and inclusive
-- Follow project guidelines
-- Accept constructive feedback
-- Focus on what's best for the community
-
-## 🔒 Security
-
-Report security vulnerabilities privately to: shuhao_zhang@hust.edu.cn
-
-## 📧 Contact
-
-- **Maintainer**: IntelliStream Team
-- **Email**: shuhao_zhang@hust.edu.cn
-- **Issues**: https://github.com/intellistream/sage-benchmark/issues
-
----
-
-## Quick Reference
-
-### Common Commands
+### 1. Create a Branch
 
 ```bash
-# Install development environment
-./quickstart.sh --dev
-
-# Format code
-ruff format .
-
-# Lint code
-ruff check .
-
-# Run tests
-pytest
-
-# Run specific experiment
-python -m sage_benchmark.experiments.exp_5_1_e2e_pipeline
+git checkout -b feature/your-feature-name
+# or
+git checkout -b fix/issue-description
 ```
 
-### File Locations
+### 2. Make Changes
 
-- Experiments: `experiments/`
-- Configurations: `config/`
-- Documentation: `docs/`
-- Tests: `tests/`
+- Follow code quality standards
+- Add tests for new functionality
+- Update documentation as needed
+- Ensure pre-commit hooks pass
 
-Thank you for contributing! 🚀
+### 3. Commit Changes
+
+Pre-commit hooks will run automatically:
+
+```bash
+git add .
+git commit -m "feat: add new benchmark for X
+
+- Implement X benchmark
+- Add tests for X
+- Update documentation"
+```
+
+Use conventional commit messages:
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation changes
+- `style:` - Code style changes (formatting, etc.)
+- `refactor:` - Code refactoring
+- `test:` - Adding or updating tests
+- `chore:` - Maintenance tasks
+
+### 4. Push and Create PR
+
+```bash
+git push origin feature/your-feature-name
+```
+
+Then create a Pull Request on GitHub.
+
+### 5. CI/CD Checks
+
+Your PR will be automatically checked by CI/CD:
+
+- ✅ Tests pass on Python 3.10, 3.11, 3.12
+- ✅ Code formatting (Black)
+- ✅ Import sorting (isort)
+- ✅ Linting (Ruff)
+- ✅ Code coverage >80%
+
+## Git Submodules
+
+SAGE Benchmark uses git submodules for external dependencies:
+
+- `src/sage/benchmark/benchmark_amm` → [LibAMM](https://github.com/intellistream/LibAMM.git)
+- `src/sage/benchmark/benchmark_anns` → [SAGE-DB-Bench](https://github.com/intellistream/SAGE-DB-Bench.git)
+- `src/sage/data` → [sageData](https://github.com/intellistream/sageData.git)
+
+### Working with Submodules
+
+If you need to modify submodule content:
+
+```bash
+# 1. Navigate to submodule
+cd src/sage/data
+
+# 2. Make changes and commit within submodule
+git add .
+git commit -m "feat: update data module"
+git push origin main-dev
+
+# 3. Return to parent repo and update reference
+cd ../../..
+git add src/sage/data
+git commit -m "chore: update data submodule"
+git push origin main-dev
+```
+
+## Questions?
+
+If you have questions or need help:
+
+- Open an issue on GitHub
+- Check existing documentation
+- Reach out to the maintainers
+
+Thank you for contributing to SAGE Benchmark! 🚀

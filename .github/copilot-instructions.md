@@ -1,434 +1,419 @@
-# sage-benchmark - GitHub Copilot Instructions
-
-## 🚨 Runtime Direction (Cross-Repo)
-
-- `sageFlownet` is the runtime component that replaces `Ray` in the SAGE ecosystem.
-- Benchmark code for scheduling/distributed execution should align with Flownet runtime usage.
-- Do NOT add new `ray` imports/dependencies.
-
-## 🚨 Installation Consistency (Cross-Repo)
-
-- 在 conda 环境中，**必须**使用 `python -m pip`，不要直接使用 `pip`。
-- 若 benchmark 依赖 SAGE 主仓库能力，先在 `SAGE/` 执行 `./quickstart.sh --dev --yes`。
-- SAGE quickstart 已安装核心独立 PyPI 依赖（如 `isagellm`、`isage-flownet`、`isage-vdb` 等），不要重复建议通过 extras 手动补装。
-- `git push` 前必须确认本仓库 `pre-push` hooks 行为；部分仓库会在 push 时自动更新版本号并触发 PyPI/TestPyPI 发布。
+# SAGE Benchmark - GitHub Copilot Instructions
 
 ## Project Overview
 
-**sage-benchmark** is SAGE framework-specific system-level benchmarking repository, focused on end-to-end experiments and performance validation of the SAGE platform.
+**SAGE Benchmark** is a comprehensive benchmarking suite for the SAGE framework, providing performance evaluation tools for various AI/ML components including RAG, agent systems, vector databases, approximate matrix multiplication, and more.
 
-**Repository**: https://github.com/intellistream/sage-benchmark
-**PyPI**: `isage-sage-benchmark`
-**Layer**: L5 (Applications - Benchmarking, independent repository)
+**Architecture**: Layer L5 (Applications - Benchmarking)
+**Dependencies**: sage.middleware (L4), sage.libs (L3), sage.kernel (L3), sage.platform (L2), sage.common (L1)
 
-**Important Distinction**:
-- **sage-benchmark** (this repository): SAGE framework-specific system benchmarks
-- **OmniBenchmark**: Organization-level comprehensive benchmark collection
-
-## Architecture & Dependencies
-
-### Layer Position
-
-sage-benchmark is an **independent L5 application** that depends on SAGE core components:
-
-```
-sage-benchmark (L5, independent)
-    ↓ depends on (via PyPI)
-L4: isage-middleware     # Operators and components
-L3: isage-kernel         # Dataflow engine
-L3: isage-libs           # RAG, agents, algorithms
-L2: isage-platform       # Platform services
-L1: isage-common         # Foundation
-```
-
-### Package Structure
+## Repository Structure
 
 ```
 sage-benchmark/
-├── __init__.py                # Package initialization with version
-├── _version.py                # Version information
-├── __main__.py                # CLI entry point
-├── pyproject.toml             # Package configuration
-├── quickstart.sh              # Development setup script
-├── config/                    # Experiment configurations
-│   ├── exp_5_1.yaml          # E2E pipeline config
-│   ├── exp_5_2.yaml          # Control Plane config
-│   └── ...
-├── experiments/               # Experiment implementations
-│   ├── exp_5_1_e2e_pipeline.py
-│   ├── exp_5_2_control_plane.py
-│   └── ...
-├── docs/                      # Documentation
-├── scripts/                   # Utility scripts
-└── tests/                     # Test suite
+├── src/sage/
+│   ├── benchmark/          # Main benchmark package
+│   │   ├── benchmark_agent/      # Agent benchmarking (tool selection, planning, timing)
+│   │   ├── benchmark_amm/        # AMM benchmarking (Git submodule: LibAMM)
+│   │   ├── benchmark_anns/       # ANNS benchmarking (Git submodule: SAGE-DB-Bench)
+│   │   ├── benchmark_control_plane/  # Control plane scheduling benchmarks
+│   │   ├── benchmark_memory/     # Memory system benchmarks
+│   │   ├── benchmark_rag/        # RAG pipeline benchmarks
+│   │   ├── benchmark_refiner/    # Context refinement benchmarks
+│   │   ├── benchmark_sage/       # System-level SAGE benchmarks
+│   │   └── benchmark_scheduler/  # Scheduler benchmarks
+│   └── data/               # Dataset management (sageData submodule)
+├── tests/                  # Test suite
+├── docs/                   # Documentation
+└── .github/
+    ├── agents/            # Custom Copilot agents
+    └── copilot-instructions.md  # This file
 ```
 
-## 🚨 CRITICAL Coding Principles
+## Git Submodules
 
-### ❌ NEVER MANUAL PIP INSTALL - ALWAYS USE pyproject.toml
+This repository uses Git submodules for external dependencies. **Important submodules**:
 
-**ALL dependencies MUST be declared in pyproject.toml. NEVER use manual `pip install` commands.**
+1. **benchmark_amm** (`src/sage/benchmark/benchmark_amm/`)
+   - Repository: https://github.com/intellistream/LibAMM.git
+   - Branch: main-dev
+   - Purpose: Approximate Matrix Multiplication benchmarking
 
-```bash
-# ❌ FORBIDDEN
-pip install transformers
+2. **benchmark_anns** (`src/sage/benchmark/benchmark_anns/`)
+   - Repository: https://github.com/intellistream/SAGE-DB-Bench.git
+   - Branch: main-dev
+   - Purpose: Approximate Nearest Neighbor Search benchmarking
 
-# ✅ CORRECT - Add to pyproject.toml then:
-pip install -e ".[dev]"
-```
+3. **sage.data** (`src/sage/data/`)
+   - Repository: https://github.com/intellistream/sageData.git
+   - Branch: main-dev
+   - Purpose: Unified dataset management
 
-### ❌ NO FALLBACK LOGIC - PROJECT-WIDE RULE
+### Working with Submodules
 
-**NEVER use try-except fallback patterns anywhere in the codebase.**
+When suggesting changes to `benchmark_amm` or `benchmark_anns`:
+- These are separate repositories tracked as submodules
+- Changes must be committed within the submodule first
+- Then update the submodule reference in the parent repository
+- Example workflow:
+  ```bash
+  # 1. Make changes in submodule
+  cd src/sage/benchmark/benchmark_amm
+  git add .
+  git commit -m "feat: add new benchmark"
+  git push origin main-dev
 
+  # 2. Update reference in parent repo
+  cd ../../../..
+  git add src/sage/benchmark/benchmark_amm
+  git commit -m "chore: update benchmark_amm submodule"
+  git push origin main
+  ```
+
+## Key Components
+
+### 1. Benchmark Modules
+
+#### benchmark_agent
+- **Purpose**: Agent capability evaluation
+- **Experiments**: Tool selection, planning, timing detection
+- **Key Files**:
+  - `experiments/`: Base experiment classes and implementations
+  - `config/`: YAML configurations
+  - `evaluation/`: Metrics and evaluators
+- **Entry Point**: `python -m sage.benchmark.benchmark_agent`
+
+#### benchmark_rag
+- **Purpose**: RAG pipeline performance evaluation
+- **Features**: Dense, sparse, hybrid, multimodal retrieval
+- **Vector DBs**: Milvus, ChromaDB, FAISS
+- **Key Files**:
+  - `implementations/pipelines/`: RAG pipeline implementations
+  - `evaluation/`: Experiment framework
+  - `config/`: Pipeline configurations
+- **Entry Point**: `python -m sage.benchmark.benchmark_rag`
+
+#### benchmark_refiner
+- **Purpose**: Context compression algorithm evaluation
+- **Algorithms**: LongLLMLingua, LLMLingua-2, selective context, etc.
+- **Metrics**: MNR (Mean Normalized Recall), compression ratio, latency
+- **Entry Point**: `sage-refiner-bench` CLI
+
+#### benchmark_control_plane
+- **Purpose**: LLM scheduling policy evaluation
+- **Schedulers**: Hybrid, LLM-based, rule-based
+- **Key Files**:
+  - `schedulers/`: Scheduler implementations
+  - `experiments/`: Experiment configurations
+  - `visualization/`: Result visualization
+
+#### benchmark_memory
+- **Purpose**: Memory system performance evaluation
+- **Systems**: MemGPT, Mem0, LangMem, MemoRAG
+- **Key Files**:
+  - `systems/`: Memory system implementations
+  - `experiments/`: Benchmark experiments
+  - `statistics/`: Statistical analysis tools
+
+#### benchmark_sage
+- **Purpose**: System-level SAGE benchmarks
+- **Focus**: Cross-cutting experiments across SAGE subsystems
+- **Content**: ICML paper artifacts, system benchmarks
+- **Key Files**:
+  - `docs/`: Writing prompts for SAGE system papers
+  - `experiments/`: System-level experiment implementations
+
+### 2. Data Management (sage.data)
+
+- **Architecture**: Two-layer design (Sources + Usages)
+- **Datasets**: qa_base, bbh, mmlu, gpqa, locomo, orca_dpo
+- **Usage**: `from sage.data import DataManager`
+- **Documentation**: See `src/sage/data/README.md`
+
+## Coding Guidelines
+
+### 1. Layer Architecture
+
+SAGE follows a strict 6-layer architecture:
+- **L1 (Common)**: Foundation utilities, configuration
+- **L2 (Platform)**: Platform services, storage
+- **L3 (Kernel/Libs)**: Core algorithms, execution engines
+- **L4 (Middleware)**: Operators, components
+- **L5 (Apps/Benchmark)**: Applications and benchmarks ← **This package**
+- **L6 (Interface)**: CLI, Studio, Gateway
+
+**Important**: No upward dependencies! Benchmark code should only depend on L1-L4.
+
+### 2. Python Style
+
+- **Python Version**: 3.10+
+- **Type Hints**: Required for all public APIs
+- **Docstrings**: Google style for all modules, classes, functions
+- **Formatting**: Black (line length 100)
+- **Linting**: Ruff
+- **Testing**: pytest with good coverage
+
+Example:
 ```python
-# ❌ BAD
-try:
-    from sage.kernel import JobManager
-except ImportError:
-    JobManager = MockManager
+"""Module docstring describing purpose."""
 
-# ✅ GOOD
-from sage.kernel import JobManager  # Fails fast if not installed
-```
-
-## Development Workflow
-
-### Installation
-
-```bash
-# Clone repository
-git clone https://github.com/intellistream/sage-benchmark.git
-cd sage-benchmark
-
-# Install SAGE dependencies (if not already installed)
-python -m pip install isage-common isage-kernel isage-libs isage-middleware
-
-# Install sage-benchmark
-./quickstart.sh --dev
-```
-
-### Running Experiments
-
-```bash
-# E2E Pipeline benchmark
-python -m sage_benchmark.experiments.exp_5_1_e2e_pipeline
-
-# Control Plane benchmark
-python -m sage_benchmark.experiments.exp_5_2_control_plane
-
-# With custom config
-python -m sage_benchmark.experiments.exp_5_1_e2e_pipeline --config config/custom.yaml
-```
-
-### Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=sage_benchmark
-
-# Run specific test
-pytest tests/test_exp_5_1.py
-```
-
-### Code Quality
-
-```bash
-# Format code
-ruff format .
-
-# Lint code
-ruff check .
-
-# Type check
-mypy .
-```
-
-## Experiment Structure
-
-### Experiment Template
-
-All experiments should follow this pattern:
-
-```python
-"""
-Experiment X.Y: Brief description
-
-Measures: [what it measures]
-Config: config/exp_X_Y.yaml
-"""
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-import yaml
 
-class ExperimentXY:
-    """Brief description."""
+def benchmark_function(config: dict[str, Any], output_dir: Path) -> dict[str, float]:
+    """Run benchmark with given configuration.
 
-    def __init__(self, config_path: Path):
-        """Initialize with configuration."""
-        with open(config_path) as f:
-            self.config = yaml.safe_load(f)
+    Args:
+        config: Configuration dictionary with experiment parameters
+        output_dir: Directory to save results
 
-    def setup(self) -> None:
-        """Set up experiment."""
+    Returns:
+        Dictionary of metric name to value
+
+    Raises:
+        ValueError: If configuration is invalid
+    """
+    # Implementation
+    pass
+```
+
+### 3. Configuration Management
+
+- **Format**: YAML for configurations
+- **Location**: `{module}/config/` directories
+- **Pattern**: Use Pydantic models for validation
+- **Environment**: Support environment variable substitution
+
+Example:
+```yaml
+experiment:
+  name: "tool_selection_benchmark"
+  output_dir: "${SAGE_OUTPUT_DIR:./output}"
+
+model:
+  name: "gpt-4"
+  temperature: 0.0
+
+evaluation:
+  metrics:
+    - "precision"
+    - "recall"
+    - "f1_score"
+```
+
+### 4. Experiment Pattern
+
+All benchmarks should follow this pattern:
+
+```python
+class BaseExperiment:
+    def prepare(self) -> None:
+        """Prepare experiment (load data, initialize models)."""
         pass
 
-    def run(self) -> dict[str, Any]:
+    def run(self) -> ExperimentResult:
         """Run experiment and return results."""
         pass
 
-    def teardown(self) -> None:
+    def finalize(self) -> None:
         """Clean up resources."""
         pass
 ```
 
-### Configuration Files
+### 5. Testing
 
-Use YAML for all configurations in `config/`:
+- **Location**: Mirror `src/` structure in `tests/`
+- **Naming**: `test_{module_name}.py`
+- **Fixtures**: Use `conftest.py` for shared fixtures
+- **Coverage**: Aim for >80% coverage
+- **CI**: Tests run on PR submission
 
-```yaml
-# config/exp_X_Y.yaml
-experiment:
-  name: "Experiment X.Y"
-  description: "Brief description"
+Example test:
+```python
+import pytest
+from sage.benchmark.benchmark_agent import ToolSelectionExperiment
 
-parameters:
-  # Experiment-specific parameters
-  key: value
+def test_tool_selection_basic(sample_config):
+    """Test basic tool selection functionality."""
+    exp = ToolSelectionExperiment(sample_config)
+    exp.prepare()
+    result = exp.run()
 
-output:
-  dir: "results/exp_X_Y"
-  format: "json"
+    assert result.metrics["precision"] > 0
+    assert len(result.predictions) == len(result.ground_truth)
 ```
 
-## Existing Experiments
+## CLI Patterns
 
-### Experiment 5.1: End-to-End Pipeline
+Most benchmark modules provide CLI entry points:
 
-**File**: `experiments/exp_5_1_e2e_pipeline.py`
-**Config**: `config/exp_5_1.yaml`
-**Purpose**: Benchmark complete SAGE dataflow pipeline performance
+```bash
+# Agent benchmarks
+python -m sage.benchmark.benchmark_agent tool-selection --config config.yaml
 
-### Experiment 5.2: Control Plane Scheduling
+# Refiner benchmarks
+sage-refiner-bench run --config config/config_longrefiner.yaml
 
-**File**: `experiments/exp_5_2_control_plane.py`
-**Config**: `config/exp_5_2.yaml`
-**Purpose**: Evaluate LLM/embedding Control Plane scheduling policies
+# RAG benchmarks
+python -m sage.benchmark.benchmark_rag --pipeline dense --db milvus
 
-### Experiment 5.3: Isolation
-
-**File**: `experiments/exp_5_3_isolation.py`
-**Config**: `config/exp_5_3.yaml`
-**Purpose**: Measure resource isolation between components
-
-### Experiment 5.4: Scalability
-
-**File**: `experiments/exp_5_4_scalability.py`
-**Config**: `config/exp_5_4.yaml`
-**Purpose**: Test horizontal and vertical scaling
-
-### Experiment 5.5: Heterogeneity
-
-**File**: `experiments/exp_5_5_heterogeneity.py`
-**Config**: `config/exp_5_5.yaml`
-**Purpose**: Validate cross-platform deployment
-
-## SAGE Dependency Reference
-
-### Common Imports
-
-```python
-# L1: Common
-from sage.common.config import get_config
-from sage.common.components.sage_embedding import EmbeddingFactory
-
-# L3: Kernel
-from sage.kernel import JobManager, NodeSelector
-from sage.kernel.operators import MapOperator, FilterOperator
-
-# L3: Libs
-from sage.libs.rag import SimpleRAG, DenseRetriever
-from sage.libs.agents import ReactAgent
-
-# L4: Middleware
-from sage.middleware.components.sage_db import SageDB
-from sage.middleware.components.sage_flow import SageFlow
-```
-
-### Control Plane Usage
-
-**MUST use Control Plane for ALL LLM operations:**
-
-```python
-# ✅ CORRECT - Through Control Plane
-from isagellm import UnifiedInferenceClient
-
-client = UnifiedInferenceClient.create()
-response = client.chat([{"role": "user", "content": "Hello"}])
-
-# ❌ WRONG - Direct engine access
-# vllm.entrypoints.openai.api_server
-```
-
-## Common Issues
-
-### Import Errors
-
-```python
-# If SAGE not installed
-from sage.common import ...  # ImportError
-
-# Solution: Install SAGE dependencies
-# pip install isage-common isage-kernel isage-libs isage-middleware
-```
-
-### Configuration Errors
-
-```python
-# Missing config file
-config = yaml.safe_load(open("nonexistent.yaml"))  # FileNotFoundError
-
-# Solution: Check config path, use Path.exists()
-```
-
-### Resource Cleanup
-
-```python
-# Always clean up in experiments
-class MyExperiment:
-    def teardown(self):
-        # Clean up resources
-        if hasattr(self, 'client'):
-            self.client.close()
+# System benchmarks
+python -m sage.benchmark.benchmark_sage --experiment 5.1
 ```
 
 ## Documentation Standards
 
+### README Structure
+
+Each benchmark module should have:
+
+1. **Overview**: Brief description and purpose
+2. **Quick Start**: Minimal example to get started
+3. **Architecture**: Component structure
+4. **Configuration**: Config file documentation
+5. **Examples**: Usage examples
+6. **API Reference**: Key classes and functions
+7. **Development**: Setup and testing instructions
+
 ### Code Comments
 
-- Docstrings for all public APIs
+- Use docstrings for public APIs
 - Inline comments for complex logic
-- TODO/FIXME with issue references
+- TODO/FIXME/NOTE markers for tracked items
+- Reference issue numbers when relevant
 
 ```python
-def benchmark_function(param: int) -> float:
-    """Brief description.
-
-    Args:
-        param: Parameter description
-
-    Returns:
-        Result description
-
-    Raises:
-        ValueError: When condition
-    """
-    # TODO(#123): Optimize this section
-    pass
+# TODO(#123): Implement parallel processing for large batches
+# FIXME: Handle edge case where model returns None
+# NOTE: This approach is temporary until we migrate to new API
 ```
 
-### Experiment Documentation
+## Common Tasks
 
-Each experiment should have:
+### Adding a New Benchmark
 
-1. **Python docstring**: Purpose, config, usage
-2. **Config file**: YAML with parameters
-3. **Design doc** (optional): `docs/exp_X_Y_design.md`
+1. Create module directory: `src/sage/benchmark/benchmark_X/`
+2. Add `__init__.py` with module docstring
+3. Create subdirectories: `config/`, `experiments/`, `evaluation/`
+4. Implement experiment classes following `BaseExperiment` pattern
+5. Add CLI entry point in `__main__.py`
+6. Write tests in `tests/benchmark_X/`
+7. Update main `README.md` and module `README.md`
+8. Add dependencies to `pyproject.toml`
 
-## Version Management & Publishing
+### Adding a New Dataset
 
-Follows SAGE's 4-digit versioning: `MAJOR.MINOR.PATCH.BUILD`
+1. Add dataset to `sage.data` submodule (sageData repository)
+2. Or create dataset loader in benchmark module
+3. Document dataset in appropriate README
+4. Add usage examples
+5. Update DataManager if using centralized management
 
-- **MAJOR** (0): Breaking changes
-- **MINOR** (1): Feature additions
-- **PATCH** (0): Bug fixes
-- **BUILD** (0): Per-commit increments
+### Adding New Metrics
 
-### Publishing Workflow (Manual, One-by-One)
+1. Implement metric in `{module}/evaluation/metrics.py`
+2. Add metric to evaluator classes
+3. Document metric calculation and interpretation
+4. Add tests for metric calculation
+5. Update configuration schemas to include new metric
 
-**🚨 CRITICAL: NEVER use bash scripts for publishing. ALWAYS use sage-pypi-publisher CLI tool directly.**
+## Performance Considerations
 
-1. **Update version**: Edit `_version.py`
-   ```bash
-   # _sage_benchmark/_version.py
-   __version__ = "X.Y.Z.W"
-   ```
+- **Lazy Loading**: Load models/data only when needed
+- **Caching**: Cache expensive computations (embeddings, model outputs)
+- **Batching**: Process data in batches for efficiency
+- **Parallelization**: Use multiprocessing for CPU-bound tasks
+- **GPU Management**: Proper CUDA memory management for GPU tasks
+- **Resource Cleanup**: Always clean up in `finalize()` methods
 
-2. **Commit and tag**:
-   ```bash
-   git commit -m "chore: bump version to X.Y.Z.W"
-   git tag -a vX.Y.Z.W -m "Release sage-benchmark X.Y.Z.W"
-   git push origin vX.Y.Z.W
-   ```
+## Error Handling
 
-3. **Publish to TestPyPI** (test first):
-   ```bash
-   cd /path/to/sage-benchmark
-   sage-pypi-publisher publish . -r testpypi --no-dry-run
-   ```
+- **Validation**: Validate configurations early (Pydantic models)
+- **Logging**: Use proper logging levels (DEBUG, INFO, WARNING, ERROR)
+- **Exceptions**: Raise specific exceptions with clear messages
+- **Recovery**: Handle transient failures with retries where appropriate
 
-4. **Publish to Production PyPI** (same command, change repository):
-   ```bash
-   cd /path/to/sage-benchmark
-   sage-pypi-publisher publish . -r pypi --no-dry-run
-   ```
+```python
+import logging
+from pathlib import Path
 
-### Key Commands
+logger = logging.getLogger(__name__)
 
-```bash
-# ✅ CORRECT: Manual one-by-one using publish command (一步完成)
-cd /path/to/sage-benchmark && sage-pypi-publisher publish . -r testpypi --no-dry-run
+def load_config(config_path: Path) -> dict:
+    """Load and validate configuration."""
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
 
-# ❌ WRONG: Using bash scripts
-# ./publish.sh sage-benchmark  # Use CLI directly instead
-
-# ❌ WRONG: Using bash loops
-# for pkg in ...; do sage-pypi-publisher ...; done
+    try:
+        # Load and validate
+        config = yaml.safe_load(config_path.read_text())
+        logger.info(f"Loaded config from {config_path}")
+        return config
+    except yaml.YAMLError as e:
+        logger.error(f"Invalid YAML in {config_path}: {e}")
+        raise ValueError(f"Failed to parse config: {e}") from e
 ```
 
-## Contributing
+## Integration Points
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
-- Development setup
-- Code style guidelines
-- Testing requirements
-- PR process
+### SAGE Framework Integration
 
-## Resources
+- **sage.common**: Configuration, paths, utilities
+- **sage.platform**: Service management, storage
+- **sage.kernel**: Job execution, scheduling
+- **sage.libs**: RAG components, algorithms
+- **sage.middleware**: Vector DBs, operators
 
-- **SAGE Main Repo**: https://github.com/intellistream/SAGE
-- **SAGE Documentation**: https://sage.intellistream.com
-- **OmniBenchmark**: https://github.com/intellistream/OmniBenchmark
-- **Issue Tracker**: https://github.com/intellistream/sage-benchmark/issues
+Example:
+```python
+from sage.common.config import get_config
+from sage.libs.rag import DenseRetriever
+from sage.middleware.milvus import MilvusClient
 
-## Key Principles for Copilot
+# Use SAGE components in benchmarks
+config = get_config()
+retriever = DenseRetriever(model=config.embedding_model)
+client = MilvusClient(host=config.milvus_host)
+```
 
-### NO Summary Documents After Task Completion
+## CI/CD
 
-**CRITICAL**: Do NOT create summary, recap, or documentation files after completing tasks unless explicitly requested.
-- ❌ NO "work_summary.md", "changes_summary.md", or similar
-- ❌ NO "completion reports" or status documents
-- ✅ DO provide brief inline messages in the conversation
-- ✅ DO use commit messages for documentation (git history is your record)
+- **GitHub Actions**: Automated testing on PR
+- **Pre-commit**: Black, Ruff, type checking
+- **Coverage**: Codecov integration
+- **Release**: Automated PyPI publishing on tag
 
-### Core Working Principles
+## Support and Resources
 
-When working with sage-benchmark:
+- **Main SAGE Repo**: https://github.com/intellistream/SAGE
+- **Issues**: Report bugs in respective repositories
+- **Documentation**: See module-specific READMEs
+- **Papers**: See `docs/benchmark_memory/` for research artifacts
 
-1. **Documentation-first**: Check existing experiments and configs before implementing
-2. **Fail-fast**: No silent fallbacks, clear error messages
-3. **Layer-aware**: Only depend on L1-L4 SAGE components
-4. **Config-driven**: Use YAML for all experiment parameters
-5. **Clean structure**: Follow experiment template pattern
-6. **Test thoroughly**: Add tests for new experiments
-7. **Document well**: Clear docstrings and comments
+## Tips for Copilot
 
-**Remember**: This is an independent repository depending on SAGE via PyPI packages.
+When helping with sage-benchmark:
+
+1. **Check submodules**: Remember `benchmark_amm` and `benchmark_anns` are submodules
+2. **Layer dependencies**: Only suggest dependencies on L1-L4
+3. **Configuration-driven**: Prefer YAML configs over hardcoded values
+4. **Testing**: Always suggest tests for new functionality
+5. **Documentation**: Include docstrings and README updates
+6. **Type hints**: All public APIs should have type annotations
+7. **Error handling**: Validate inputs and provide clear error messages
+8. **Experiment pattern**: Follow prepare/run/finalize lifecycle
+9. **CLI consistency**: Follow existing CLI patterns
+10. **Performance**: Consider batching and caching for expensive operations
+
+## Version Information
+
+- **Python**: 3.10+
+- **Package**: isage-benchmark
+- **License**: MIT
+- **Maintainer**: IntelliStream Team
 
 ---
 
-*Last Updated: February 2026*
+*Last Updated: January 2026*

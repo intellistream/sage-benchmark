@@ -41,6 +41,13 @@ ENV/
 results/
 outputs/
 
+# Environment variables (never commit real tokens)
+.env
+
+# hf_data/ is intentionally NOT ignored:
+# Users temporarily commit it to trigger the upload-to-hf GitHub Actions workflow.
+# The workflow auto-deletes hf_data/ after uploading to Hugging Face.
+
 # OS
 .DS_Store
 Thumbs.db
