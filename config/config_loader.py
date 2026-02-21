@@ -49,6 +49,7 @@ class WorkloadConfig:
     output_tokens_min: int = 64
     output_tokens_max: int = 256
     seed: int = 42
+    arrival_pattern: str = "poisson"
 
 
 @dataclass
@@ -78,6 +79,7 @@ class ExperimentConfig:
     name: str
     description: str
     experiment_section: str
+    gateway_url: str = "http://localhost:8888"
     hardware: HardwareConfig = field(default_factory=HardwareConfig)
     llm_model: ModelConfig = field(
         default_factory=lambda: ModelConfig(name="Qwen/Qwen2.5-7B-Instruct")
@@ -180,6 +182,7 @@ class ConfigLoader:
             output_tokens_min=output_tokens.get("min", 64),
             output_tokens_max=output_tokens.get("max", 256),
             seed=wl_raw.get("seed", 42),
+            arrival_pattern=wl_raw.get("arrival_pattern", "poisson"),
         )
 
         # Metrics
@@ -209,6 +212,7 @@ class ConfigLoader:
             name=exp.get("name", "unnamed"),
             description=exp.get("description", ""),
             experiment_section=exp.get("section", ""),
+            gateway_url=raw.get("gateway_url", "http://localhost:8888"),
             hardware=hardware,
             llm_model=llm_model,
             embedding_model=embedding_model,

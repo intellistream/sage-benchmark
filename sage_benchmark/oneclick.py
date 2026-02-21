@@ -22,12 +22,6 @@ def _default_output_dir(repo_root: Path) -> Path:
     return repo_root / "results" / f"oneclick_{stamp}"
 
 
-def _is_benchmark_module_available(python_executable: str, *, cwd: Path) -> bool:
-    probe = [python_executable, "-c", "import sage.benchmark.benchmark_sage"]
-    result = subprocess.run(probe, cwd=str(cwd), capture_output=True, text=True)
-    return result.returncode == 0
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -113,17 +107,9 @@ def main() -> int:
         if args.benchmark_command:
             benchmark_cmd = shlex.split(args.benchmark_command)
         else:
-            if not _is_benchmark_module_available(args.python, cwd=repo_root):
-                raise ModuleNotFoundError(
-                    "Cannot import 'sage.benchmark.benchmark_sage'. "
-                    "Install an environment that provides this module, or pass "
-                    "--benchmark-command to specify your runnable benchmark entrypoint."
-                )
-
             benchmark_cmd = [
                 args.python,
-                "-m",
-                "sage.benchmark.benchmark_sage",
+                str(repo_root / "__main__.py"),
                 "--all",
                 "--output-dir",
                 str(output_dir),
