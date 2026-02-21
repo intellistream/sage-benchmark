@@ -6,8 +6,8 @@
     HF_TOKEN=hf_xxx python scripts/upload_to_hf.py
 
 环境变量：
-    HF_TOKEN      - Hugging Face API token（必填）
-    HF_ENDPOINT   - HF endpoint，默认 https://hf-mirror.com
+    HF_TOKEN      - Hugging Face API token（可选，优先使用）
+    HF_ENDPOINT   - HF endpoint，默认 https://huggingface.co
 """
 
 from __future__ import annotations
@@ -53,16 +53,11 @@ def upload_files(api, repo_id: str, files: list[Path]) -> None:
 
 
 def main() -> None:
-    # 检查 token
+    # 读取 token（可选）
     token = os.environ.get("HF_TOKEN")
-    if not token:
-        print("❌ HF_TOKEN 环境变量未设置")
-        print("\n请设置 HF_TOKEN:")
-        print("  export HF_TOKEN=hf_xxx")
-        sys.exit(1)
 
-    # 配置 HF endpoint（支持 mirror）
-    hf_endpoint = os.environ.get("HF_ENDPOINT", "https://hf-mirror.com")
+    # 写入默认使用官方 endpoint，避免 mirror 写入权限问题
+    hf_endpoint = os.environ.get("HF_ENDPOINT", "https://huggingface.co")
     print(f"📡 Using HF endpoint: {hf_endpoint}")
 
     try:
@@ -72,7 +67,32 @@ def main() -> None:
         sys.exit(1)
 
     os.environ["HF_ENDPOINT"] = hf_endpoint
-    api = HfApi(endpoint=hf_endpoint, token=token)
+
+    # 如果提供了 HF_TOKEN，先验证；无效则回退到本机登录态
+    resolved_token = token
+    if resolved_token:
+        try:
+            HfApi(endpoint=hf_endpoint, token=resolved_token).whoami()
+            print("✓ HF_TOKEN is valid")
+        except Exception as exc:
+            print(f"⚠️  Provided HF_TOKEN is invalid ({exc}); falling back to local HF auth")
+            resolved_token = None
+    else:
+        print("ℹ️  HF_TOKEN not set; using local HF auth if available")
+
+    api = HfApi(endpoint=hf_endpoint, token=resolved_token)
+
+    # 提前验证鉴权
+    try:
+        who = api.whoami()
+        user_name = who.get("name") if isinstance(who, dict) else None
+        print(f"✓ Authenticated as: {user_name or 'unknown'}")
+    except Exception:
+        print("❌ No valid Hugging Face authentication found.")
+        print("\n可选修复方式：")
+        print("  1) export HF_TOKEN=hf_xxx")
+        print("  2) hf auth login")
+        sys.exit(1)
 
     # 确保 repo 存在
     ensure_repo_exists(api, HF_REPO)

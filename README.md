@@ -89,6 +89,38 @@ The `quickstart.sh` script will automatically:
 
 **Why install pre-commit?** Pre-commit hooks automatically check code quality (formatting, import sorting, linting) before each commit, preventing CI/CD failures.
 
+## ⚡ One-Click Full Pipeline
+
+Run the end-to-end benchmark pipeline in one command:
+
+```bash
+sage-benchmark-oneclick
+```
+
+This command executes:
+
+1. Full system benchmark (`Q1..Q8`)
+2. Aggregate + merge results for HF
+3. Upload to `intellistream/sage-benchmark-results`
+4. Refresh `sage-docs` leaderboard data
+
+Useful options:
+
+```bash
+# Quick smoke path
+sage-benchmark-oneclick --quick
+
+# Validate configs only, skip upload for local checks
+sage-benchmark-oneclick --dry-run --skip-upload
+
+# Explicit docs path
+sage-benchmark-oneclick --docs-root /path/to/sage-docs
+
+# If your environment does not expose sage.benchmark.benchmark_sage,
+# provide an explicit benchmark entry command
+sage-benchmark-oneclick --benchmark-command "python -m sage.benchmark.benchmark_sage --all --quick"
+```
+
 ### Manual Installation
 
 If you prefer manual setup:

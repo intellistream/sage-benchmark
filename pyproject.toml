@@ -82,6 +82,8 @@ Issues = "https://github.com/intellistream/SAGE/issues"
 sage-cp-bench = "sage.benchmark.benchmark_control_plane.cli:main"
 # Refiner Benchmark CLI
 sage-refiner-bench = "sage.benchmark.benchmark_refiner.cli:main"
+# End-to-end one-click pipeline
+sage-benchmark-oneclick = "sage_benchmark.oneclick:main"
 
 [tool.setuptools]
 # Flat-layout repository: install top-level Python packages directly
