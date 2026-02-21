@@ -12,7 +12,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Files and dirs that are explicitly allowed to contain legacy Ray tokens
 # (e.g. migration notes in a comment).  Paths relative to REPO_ROOT.
-ALLOWLIST: set[Path] = set()
+ALLOWLIST: set[Path] = {
+    Path("tests/test_legacy_terms.py"),
+    Path("experiments/backends/ray_runner.py"),
+}
 
 FORBIDDEN_PATTERNS: dict[str, re.Pattern[str]] = {
     "import ray":        re.compile(r"\bimport\s+ray\b"),

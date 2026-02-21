@@ -18,6 +18,7 @@ import argparse
 import sys
 import uuid
 import time
+from importlib import metadata
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -43,6 +44,23 @@ from common.metrics_schema import (
     compute_config_hash,
 )
 from common.result_writer import append_jsonl_record, export_jsonl_to_csv
+from common.component_versions import collect_component_versions
+from common.system_profile import collect_system_profile
+
+try:
+    from _version import __version__ as BENCHMARK_VERSION
+except Exception:
+    BENCHMARK_VERSION = "unknown"
+
+try:
+    SAGE_VERSION = metadata.version("isage")
+except Exception:
+    SAGE_VERSION = "unknown"
+
+try:
+    SAGELLM_VERSION = metadata.version("isagellm")
+except Exception:
+    SAGELLM_VERSION = "unknown"
 
 
 class DataSource(SourceFunction):
@@ -145,6 +163,13 @@ def build_unified_record(
         backend_hash=compute_backend_hash(backend),
         metadata={
             "scheduler_name": scheduler_name,
+            "sage_version": SAGE_VERSION,
+            "sagellm_version": SAGELLM_VERSION,
+            "benchmark_version": BENCHMARK_VERSION,
+            "model_name": "unknown",
+            "embedding_model_name": "unknown",
+            "system_profile": collect_system_profile(),
+            "component_versions": collect_component_versions(),
             "results_count": results_count,
             "raw_metrics": raw_metrics,
         },

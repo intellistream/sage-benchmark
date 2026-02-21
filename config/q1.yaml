@@ -11,12 +11,12 @@ hardware:
 
 models:
   llm:
-    name: "Qwen/Qwen2.5-7B-Instruct"
+    name: "Qwen/Qwen2.5-0.5B-Instruct"
     instances: 2
     device: "cuda"
     tensor_parallel: 1
   embedding:
-    name: "BAAI/bge-m3"
+    name: "BAAI/bge-small-zh-v1.5"
     instances: 1
     device: "cpu"
 

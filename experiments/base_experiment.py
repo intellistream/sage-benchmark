@@ -12,6 +12,7 @@ import json
 import random
 import time
 import uuid
+from importlib import metadata
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -29,8 +30,27 @@ from sage.benchmark.benchmark_sage.experiments.common.result_writer import (
     append_jsonl_record,
     export_jsonl_to_csv,
 )
+from sage.benchmark.benchmark_sage.experiments.common.component_versions import (
+    collect_component_versions,
+)
+from sage.benchmark.benchmark_sage.experiments.common.system_profile import collect_system_profile
 from sage.benchmark.benchmark_sage.experiments.config import ExperimentConfig
 from sage.benchmark.benchmark_sage.experiments.plotting import Plotter
+
+try:
+    from _version import __version__ as BENCHMARK_VERSION
+except Exception:
+    BENCHMARK_VERSION = "unknown"
+
+try:
+    SAGE_VERSION = metadata.version("isage")
+except Exception:
+    SAGE_VERSION = "unknown"
+
+try:
+    SAGELLM_VERSION = metadata.version("isagellm")
+except Exception:
+    SAGELLM_VERSION = "unknown"
 
 
 @dataclass
@@ -300,6 +320,13 @@ class BaseExperiment(ABC):
             backend_hash=compute_backend_hash(backend),
             metadata={
                 "experiment_name": result.experiment_name,
+                "sage_version": SAGE_VERSION,
+                "sagellm_version": SAGELLM_VERSION,
+                "benchmark_version": BENCHMARK_VERSION,
+                "model_name": self.config.llm_model.name,
+                "embedding_model_name": self.config.embedding_model.name,
+                "system_profile": collect_system_profile(),
+                "component_versions": collect_component_versions(),
                 "total_requests": result.total_requests,
                 "successful_requests": result.successful_requests,
                 "failed_requests": result.failed_requests,

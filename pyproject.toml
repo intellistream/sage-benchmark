@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "isage-benchmark"
-dynamic = ["version"]
+version = "0.1.0.6"
 description = "SAGE Benchmark - RAG and experimental benchmarks for SAGE framework"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -84,17 +84,8 @@ sage-cp-bench = "sage.benchmark.benchmark_control_plane.cli:main"
 sage-refiner-bench = "sage.benchmark.benchmark_refiner.cli:main"
 
 [tool.setuptools]
-# Automatically discover all packages under src/
-# This will find all directories with __init__.py files
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["sage*"]
-namespaces = true
-
-[tool.setuptools.dynamic]
-version = {attr = "sage.benchmark._version.__version__"}
+# Flat-layout repository: install top-level Python packages directly
+packages = ["config", "experiments", "sage_benchmark"]
 
 [tool.setuptools.package-data]
 "sage.benchmark.benchmark_rag" = [
