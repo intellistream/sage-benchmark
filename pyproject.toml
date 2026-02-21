@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "isage-benchmark"
-version = "0.1.0.8"
+version = "0.1.0.9"
 description = "SAGE Benchmark - RAG and experimental benchmarks for SAGE framework"
 readme = "README.md"
 requires-python = ">=3.10"
