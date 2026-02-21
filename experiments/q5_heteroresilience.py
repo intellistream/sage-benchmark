@@ -141,7 +141,9 @@ def main() -> None:  # pragma: no cover
         rep_label = f" (repetition {rep}/{args.repeat})" if args.repeat > 1 else ""
         print(f"Running Q5 HeteroResilience{rep_label} …")
         rep_output = output_dir / (f"rep{rep}" if args.repeat > 1 else "")
-        experiment = HeterogeneityExperiment(config=config, output_dir=rep_output, verbose=args.verbose)
+        experiment = HeterogeneityExperiment(
+            config=config, output_dir=rep_output, verbose=args.verbose
+        )
         experiment.backend = args.backend
         experiment.nodes = int(args.nodes)
         experiment.parallelism = int(args.parallelism)

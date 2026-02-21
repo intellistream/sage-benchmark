@@ -258,12 +258,18 @@ Examples:
         choices=("fifo", "load_aware", "default"),
         help="Scheduler name passed to scheduler_comparison workload.",
     )
-    parser.add_argument("--items", type=int, default=10, help="Total items for workload generation.")
+    parser.add_argument(
+        "--items", type=int, default=10, help="Total items for workload generation."
+    )
     parser.add_argument(
         "--parallelism", type=int, default=2, help="Operator/task parallelism for both backends."
     )
-    parser.add_argument("--nodes", type=int, default=1, help="Node count metadata for both backends.")
-    parser.add_argument("--seed", type=int, default=42, help="Global seed metadata for both backends.")
+    parser.add_argument(
+        "--nodes", type=int, default=1, help="Node count metadata for both backends."
+    )
+    parser.add_argument(
+        "--seed", type=int, default=42, help="Global seed metadata for both backends."
+    )
     parser.add_argument("--run-id", default="", help="Optional explicit run_id.")
     parser.add_argument(
         "--python",

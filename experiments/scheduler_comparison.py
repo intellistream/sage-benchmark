@@ -256,8 +256,7 @@ def main():
     import os
 
     test_mode = (
-        os.environ.get("SAGE_EXAMPLES_MODE") == "test"
-        or os.environ.get("SAGE_TEST_MODE") == "true"
+        os.environ.get("SAGE_EXAMPLES_MODE") == "test" or os.environ.get("SAGE_TEST_MODE") == "true"
     )
 
     spec = WorkloadSpec(

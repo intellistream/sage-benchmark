@@ -71,13 +71,18 @@ def test_run_paired_backends_success_creates_manifest(tmp_path: Path) -> None:
 def test_run_paired_backends_raises_on_backend_failure(tmp_path: Path) -> None:
     def fake_runner(command: list[str], cwd: Path) -> CommandResult:
         _ = cwd
-        if command[1].endswith("scheduler_comparison.py") and command[command.index("--backend") + 1] == "ray":
+        if (
+            command[1].endswith("scheduler_comparison.py")
+            and command[command.index("--backend") + 1] == "ray"
+        ):
             return CommandResult(returncode=2, stdout="", stderr="ray failed")
 
         if "--output-dir" in command:
             output_dir = Path(command[command.index("--output-dir") + 1])
             output_dir.mkdir(parents=True, exist_ok=True)
-            (output_dir / "unified_results.csv").write_text("backend,workload,run_id\n", encoding="utf-8")
+            (output_dir / "unified_results.csv").write_text(
+                "backend,workload,run_id\n", encoding="utf-8"
+            )
             (output_dir / "unified_results.jsonl").write_text("{}\n", encoding="utf-8")
 
         return CommandResult(returncode=0, stdout="ok", stderr="")

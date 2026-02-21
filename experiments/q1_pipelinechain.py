@@ -186,6 +186,7 @@ def main() -> None:  # pragma: no cover
 
     if args.verbose:
         import json
+
         print("Run config:")
         print(json.dumps(run_cfg, indent=2))
 

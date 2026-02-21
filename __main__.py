@@ -184,9 +184,11 @@ Examples:
         run_cfg = build_run_config(args, workload=exp_q)
         print(f"\n{'=' * 60}")
         print(f"Running Workload {_workload_label(exp_q)}")
-        print(f"  backend={run_cfg['backend']}  nodes={run_cfg['nodes']}  "
-              f"parallelism={run_cfg['parallelism']}  repeat={run_cfg['repeat']}  "
-              f"seed={run_cfg['seed']}")
+        print(
+            f"  backend={run_cfg['backend']}  nodes={run_cfg['nodes']}  "
+            f"parallelism={run_cfg['parallelism']}  repeat={run_cfg['repeat']}  "
+            f"seed={run_cfg['seed']}"
+        )
         print(f"{'=' * 60}\n")
 
         if args.config:

@@ -48,7 +48,7 @@ def _read_gpu_name() -> str | None:
     if not names:
         return None
     first = names[0]
-    return first if len(names) == 1 else f"{first} (+{len(names)-1} more)"
+    return first if len(names) == 1 else f"{first} (+{len(names) - 1} more)"
 
 
 def collect_system_profile() -> dict[str, object]:

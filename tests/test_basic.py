@@ -15,6 +15,7 @@ def test_version():
 def test_imports():
     """Test that basic imports work."""
     import sage_benchmark
+
     assert hasattr(sage_benchmark, "__version__")
     assert hasattr(sage_benchmark, "__author__")
     assert hasattr(sage_benchmark, "__email__")

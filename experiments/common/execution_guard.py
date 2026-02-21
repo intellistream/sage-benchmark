@@ -48,7 +48,9 @@ def run_pipeline_bounded(
             jobs = env.jobmanager.jobs
             if env_uuid not in jobs:
                 elapsed = time.time() - start_time
-                return ExecutionGuardResult(completed=True, timed_out=False, elapsed_seconds=elapsed)
+                return ExecutionGuardResult(
+                    completed=True, timed_out=False, elapsed_seconds=elapsed
+                )
 
             time.sleep(poll_interval_seconds)
 

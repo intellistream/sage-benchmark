@@ -228,16 +228,14 @@ class ConfigLoader:
             "Q1": ExperimentConfig(
                 name="q1_pipelinechain",
                 description=(
-                    "Q1 PipelineChain (e2e_pipeline): "
-                    "End-to-end RAG pipeline workload family"
+                    "Q1 PipelineChain (e2e_pipeline): End-to-end RAG pipeline workload family"
                 ),
                 experiment_section="Q1",
             ),
             "Q2": ExperimentConfig(
                 name="q2_controlmix",
                 description=(
-                    "Q2 ControlMix (control_plane): "
-                    "Mixed LLM+embedding scheduling workload family"
+                    "Q2 ControlMix (control_plane): Mixed LLM+embedding scheduling workload family"
                 ),
                 experiment_section="Q2",
                 baselines=["sage_unified", "vllm_only", "separated"],
@@ -253,8 +251,7 @@ class ConfigLoader:
             "Q4": ExperimentConfig(
                 name="q4_scalefrontier",
                 description=(
-                    "Q4 ScaleFrontier (scalability): "
-                    "Scale-out throughput/latency workload family"
+                    "Q4 ScaleFrontier (scalability): Scale-out throughput/latency workload family"
                 ),
                 experiment_section="Q4",
                 policies=["fifo", "priority", "slo_aware", "hybrid"],
@@ -285,10 +282,7 @@ class ConfigLoader:
             ),
             "Q8": ExperimentConfig(
                 name="q8_recoverysoak",
-                description=(
-                    "Q8 RecoverySoak (recovery): "
-                    "Fault-recovery soak workload family"
-                ),
+                description=("Q8 RecoverySoak (recovery): Fault-recovery soak workload family"),
                 experiment_section="Q8",
             ),
         }

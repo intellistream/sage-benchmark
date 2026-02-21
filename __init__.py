@@ -22,4 +22,3 @@ __author__: str = _version_mod.__author__
 __email__: str = _version_mod.__email__
 
 __all__ = ["__version__", "__author__", "__email__"]
-

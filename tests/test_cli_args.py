@@ -219,12 +219,18 @@ class TestBuildRunConfig:
         args = _parse(
             _make_parser(),
             [
-                "--backend", "ray",
-                "--nodes", "4",
-                "--parallelism", "8",
-                "--repeat", "3",
-                "--seed", "7",
-                "--output-dir", "/tmp/out",
+                "--backend",
+                "ray",
+                "--nodes",
+                "4",
+                "--parallelism",
+                "8",
+                "--repeat",
+                "3",
+                "--seed",
+                "7",
+                "--output-dir",
+                "/tmp/out",
             ],
         )
         cfg = build_run_config(args)

@@ -169,6 +169,7 @@ class RayRunner(WorkloadRunner):
         @ray.remote(num_cpus=num_cpus_per_task)
         def _process(item: str) -> str:
             import time as _time
+
             _time.sleep(_sleep)
             return f"processed_{item}"
 

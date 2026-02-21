@@ -135,8 +135,13 @@ def detect_config_mismatches(df: pd.DataFrame) -> pd.DataFrame:
         if group["backend"].nunique() < 2:
             continue
 
-        signatures = group[["backend", "seed", "nodes", "parallelism", "config_hash"]].drop_duplicates()
-        if signatures[["seed", "nodes", "parallelism", "config_hash"]].drop_duplicates().shape[0] <= 1:
+        signatures = group[
+            ["backend", "seed", "nodes", "parallelism", "config_hash"]
+        ].drop_duplicates()
+        if (
+            signatures[["seed", "nodes", "parallelism", "config_hash"]].drop_duplicates().shape[0]
+            <= 1
+        ):
             continue
 
         detail = "; ".join(
@@ -206,9 +211,7 @@ def write_summary_markdown(
 
     lines.append("## Backend Summary")
     lines.append("")
-    lines.append(
-        "| backend | records | throughput_mean | latency_p95_mean | latency_p99_mean |"
-    )
+    lines.append("| backend | records | throughput_mean | latency_p95_mean | latency_p99_mean |")
     lines.append("|---|---:|---:|---:|---:|")
 
     for row in backend_summary.itertuples(index=False):
@@ -229,20 +232,14 @@ def write_summary_markdown(
         lines.append("|---|---|---:|---|")
         for row in mismatch_df.itertuples(index=False):
             detail = str(row.detail).replace("|", "\\|")
-            lines.append(
-                f"| {row.workload} | {row.run_id} | {row.backend_count} | {detail} |"
-            )
+            lines.append(f"| {row.workload} | {row.run_id} | {row.backend_count} | {detail} |")
 
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return output_path
 
 
 def _plot_throughput(df: pd.DataFrame, output_path: Path) -> Path:
-    grouped = (
-        df.groupby(["workload", "backend"], dropna=False)["throughput"]
-        .mean()
-        .reset_index()
-    )
+    grouped = df.groupby(["workload", "backend"], dropna=False)["throughput"].mean().reset_index()
 
     pivot = grouped.pivot(index="workload", columns="backend", values="throughput")
     ax = pivot.plot(kind="bar", figsize=(10, 6))

@@ -47,9 +47,11 @@ def test_q3_q8_support_dry_run() -> None:
 def test_q3_q8_propagate_unified_metadata() -> None:
     for workload, path in ENTRYPOINT_FILES.items():
         content = _read(path)
-        assert "experiment.backend = args.backend" in content, f"{workload} missing backend metadata"
+        assert "experiment.backend = args.backend" in content, (
+            f"{workload} missing backend metadata"
+        )
         assert "experiment.nodes = int(args.nodes)" in content, f"{workload} missing nodes metadata"
-        assert (
-            "experiment.parallelism = int(args.parallelism)" in content
-        ), f"{workload} missing parallelism metadata"
+        assert "experiment.parallelism = int(args.parallelism)" in content, (
+            f"{workload} missing parallelism metadata"
+        )
         assert "experiment.run_id =" in content, f"{workload} missing run_id metadata"

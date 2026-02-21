@@ -2,6 +2,7 @@
 
 All distributed-execution work must go through sageFlownet / SAGE facade APIs.
 """
+
 from __future__ import annotations
 
 import re
@@ -18,15 +19,15 @@ ALLOWLIST: set[Path] = {
 }
 
 FORBIDDEN_PATTERNS: dict[str, re.Pattern[str]] = {
-    "import ray":        re.compile(r"\bimport\s+ray\b"),
-    "from ray":          re.compile(r"\bfrom\s+ray\b"),
-    "ray.init()":        re.compile(r"\bray\.init\s*\("),
-    "ray.remote":        re.compile(r"\bray\.remote\b"),
+    "import ray": re.compile(r"\bimport\s+ray\b"),
+    "from ray": re.compile(r"\bfrom\s+ray\b"),
+    "ray.init()": re.compile(r"\bray\.init\s*\("),
+    "ray.remote": re.compile(r"\bray\.remote\b"),
     "RayQueueDescriptor": re.compile(r"\bRayQueueDescriptor\b"),
-    "RayQueueManager":   re.compile(r"\bRayQueueManager\b"),
-    "RayServiceTask":    re.compile(r"\bRayServiceTask\b"),
-    "ray_task.py":       re.compile(r"\bray_task\.py\b"),
-    "use_ray=True":      re.compile(r"\buse_ray\s*=\s*True\b"),
+    "RayQueueManager": re.compile(r"\bRayQueueManager\b"),
+    "RayServiceTask": re.compile(r"\bRayServiceTask\b"),
+    "ray_task.py": re.compile(r"\bray_task\.py\b"),
+    "use_ray=True": re.compile(r"\buse_ray\s*=\s*True\b"),
 }
 
 
@@ -52,6 +53,5 @@ def test_no_legacy_ray_terms_in_source() -> None:
 
     assert not violations, (
         "Legacy Ray terms found in source code.  "
-        "Use sageFlownet / SAGE facade APIs instead:\n"
-        + "\n".join(sorted(violations))
+        "Use sageFlownet / SAGE facade APIs instead:\n" + "\n".join(sorted(violations))
     )

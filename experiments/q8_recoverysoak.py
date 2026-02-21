@@ -82,7 +82,9 @@ def main() -> None:  # pragma: no cover
         rep_label = f" (repetition {rep}/{args.repeat})" if args.repeat > 1 else ""
         print(f"Running Q8 RecoverySoak{rep_label} …")
         rep_output = output_dir / (f"rep{rep}" if args.repeat > 1 else "")
-        experiment = RecoverySoakExperiment(config=config, output_dir=rep_output, verbose=args.verbose)
+        experiment = RecoverySoakExperiment(
+            config=config, output_dir=rep_output, verbose=args.verbose
+        )
         experiment.duration_seconds = args.duration
         experiment.backend = args.backend
         experiment.nodes = int(args.nodes)
