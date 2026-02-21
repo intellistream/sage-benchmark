@@ -37,6 +37,7 @@ dependencies = [
     # SAGE dependencies from PyPI
     # Version compatibility: middleware 0.2.3 and libs 0.2.0.6 both require transformers>=4.52.0,<4.54.0
     "isage-common>=0.2.3",
+    "isage-platform>=0.2.3",  # Provides sage.platform.runtime required by experiment runners
     "isage-kernel>=0.2.3",
     "isage-middleware>=0.2.3",  # Must be >=0.2.3 for transformers compatibility with libs
     "isage-libs>=0.2.0.6",
