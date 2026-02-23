@@ -240,7 +240,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add hf_data/
-          git diff --cached --quiet || (git commit -m "ci: benchmark results $(date -u +%Y-%m-%dT%H:%M:%SZ) [run ${{ github.run_id }}]" && git push)
+          if git diff --cached --quiet; then
+            echo "No hf_data changes to commit"
+          else
+            git commit -m "ci: benchmark results $(date -u +%Y-%m-%dT%H:%M:%SZ) [run ${{ github.run_id }}]"
+            # Rebase onto latest remote to avoid rejection when other commits landed
+            # during a long benchmark run.
+            git pull --rebase origin main-dev
+            git push
+          fi
 
       - name: Upload benchmark artifacts
         if: always()
