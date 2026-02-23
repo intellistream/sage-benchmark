@@ -40,6 +40,7 @@ jobs:
     env:
       HF_ENDPOINT: https://hf-mirror.com
       SAGELLM_PORT: 8888
+      SAGELLM_ENGINE_PORT: 8889
       SAGELLM_EMBED_PORT: 8890
     steps:
       - name: Checkout
@@ -69,7 +70,17 @@ jobs:
           python -m pip install "isagellm>=0.5.2.0"
           python -m pip install -e .
 
-      - name: Start sagellm serve (CPU + embedding)
+      - name: Start LLM engine (background)
+        run: |
+          sagellm serve-engine \
+            --engine-kind llm \
+            --backend cpu \
+            --model sshleifer/tiny-gpt2 \
+            --port "$SAGELLM_ENGINE_PORT" \
+            > /tmp/llm-engine.log 2>&1 &
+          echo "LLM_ENGINE_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Start gateway + embedding (background)
         run: |
           sagellm serve \
             --backend cpu \
@@ -95,6 +106,34 @@ jobs:
           echo "--- sagellm.log (last 80 lines) ---"
           tail -80 /tmp/sagellm.log
           exit 1
+
+      - name: Wait for LLM engine and register
+        run: |
+          echo "Waiting for LLM engine on port ${SAGELLM_ENGINE_PORT}..."
+          for i in $(seq 1 60); do
+            if curl -s -o /dev/null -w '%{http_code}' "http://localhost:${SAGELLM_ENGINE_PORT}/health" 2>/dev/null | grep -q '200'; then
+              echo "LLM engine healthy after ~$((i * 5))s"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "::error::LLM engine not healthy after 5 min"
+              echo "--- llm-engine.log ---"
+              cat /tmp/llm-engine.log
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "Registering LLM engine to gateway..."
+          curl -s -w '\n%{http_code}' -X POST "http://localhost:${SAGELLM_PORT}/v1/management/engines/register" \
+            -H 'Content-Type: application/json' \
+            -d "{\"engine_id\":\"engine-cpu-${SAGELLM_ENGINE_PORT}\",\"model_id\":\"sshleifer/tiny-gpt2\",\"host\":\"localhost\",\"port\":${SAGELLM_ENGINE_PORT},\"engine_kind\":\"llm\"}" \
+            | tee /tmp/register-llm.log
+          HTTP_CODE=$(tail -1 /tmp/register-llm.log)
+          if [ "$HTTP_CODE" -ge 400 ] 2>/dev/null; then
+            echo "::error::LLM engine registration failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+          echo "LLM engine registered successfully"
 
       - name: Wait for embedding engine
         run: |
