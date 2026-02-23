@@ -71,13 +71,7 @@ jobs:
         run: |
           for i in $(seq 1 36); do
             MODELS=$(curl -sf "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || echo '{}')
-            if echo "$MODELS" | python -c "
-import sys, json
-d = json.load(sys.stdin)
-models = [m.get('id','') for m in d.get('data', [])]
-has_embed = any('MiniLM' in m or 'embed' in m.lower() for m in models)
-sys.exit(0 if has_embed else 1)
-" 2>/dev/null; then
+            if echo "$MODELS" | python -c "import sys,json; d=json.load(sys.stdin); models=[m.get('id','') for m in d.get('data',[])]; sys.exit(0 if any('MiniLM' in m or 'embed' in m.lower() for m in models) else 1)" 2>/dev/null; then
               echo "Embedding registered after ~$((i * 5))s"; break
             fi
             [ "$i" -eq 36 ] && echo "::warning::Not registered after 3min; continuing" && break
