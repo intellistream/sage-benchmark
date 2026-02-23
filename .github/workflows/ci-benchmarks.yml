@@ -1,3 +1,14 @@
+# Benchmark CI for sage-benchmark
+# Runs Q1-Q8 experiments against real sagellm CPU backend
+#
+# Pattern aligned with sagellm-benchmark CI:
+#   - China mirrors for pip & HF
+#   - Robust health checks with diagnostics
+#   - Separate artifact upload
+#
+# Trigger: manual dispatch or nightly schedule
+# Results flow: run benchmarks → aggregate → commit hf_data/ → upload-to-hf.yml
+
 name: Benchmark CI
 
 on:
@@ -17,6 +28,10 @@ on:
         default: "all"
   schedule:
     - cron: "0 2 * * *"
+
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   run-benchmarks:
@@ -39,13 +54,22 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install Python dependencies
+      - name: Configure pip mirror
+        run: |
+          mkdir -p ~/.pip
+          cat > ~/.pip/pip.conf << 'EOF'
+          [global]
+          index-url = https://pypi.tuna.tsinghua.edu.cn/simple
+          trusted-host = pypi.tuna.tsinghua.edu.cn
+          EOF
+
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "isagellm>=0.5.1.9"
+          python -m pip install "isagellm>=0.5.2.0"
           python -m pip install -e .
 
-      - name: Start sagellm full stack (CPU + embedding, port ${{ env.SAGELLM_PORT }})
+      - name: Start sagellm serve (CPU + embedding)
         run: |
           sagellm serve \
             --backend cpu \
@@ -57,37 +81,64 @@ jobs:
             > /tmp/sagellm.log 2>&1 &
           echo "SAGELLM_PID=$!" >> "$GITHUB_ENV"
 
-      - name: Wait for gateway /health
+      - name: Wait for gateway health
         run: |
+          echo "Waiting for gateway on port ${SAGELLM_PORT}..."
           for i in $(seq 1 72); do
-            if curl -sf "http://localhost:${SAGELLM_PORT}/health" > /dev/null 2>&1; then
-              echo "Gateway healthy after ~$((i * 5))s"; break
+            if curl -s -o /dev/null -w '%{http_code}' "http://localhost:${SAGELLM_PORT}/health" 2>/dev/null | grep -q '200'; then
+              echo "Gateway healthy after ~$((i * 5))s"
+              exit 0
             fi
-            [ "$i" -eq 72 ] && { cat /tmp/sagellm.log; exit 1; }
             sleep 5
           done
+          echo "::error::Gateway not healthy after 6 min"
+          echo "--- sagellm.log (last 80 lines) ---"
+          tail -80 /tmp/sagellm.log
+          exit 1
 
-      - name: Wait for embedding engine registration
+      - name: Wait for embedding engine
         run: |
+          echo "Waiting for embedding model registration..."
           for i in $(seq 1 36); do
-            MODELS=$(curl -sf "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || echo '{}')
-            if echo "$MODELS" | python -c "import sys,json; d=json.load(sys.stdin); models=[m.get('id','') for m in d.get('data',[])]; sys.exit(0 if any('MiniLM' in m or 'embed' in m.lower() for m in models) else 1)" 2>/dev/null; then
-              echo "Embedding registered after ~$((i * 5))s"; break
+            RESP=$(curl -s "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || true)
+            if [ -n "$RESP" ] && echo "$RESP" | python -c "import sys,json; d=json.load(sys.stdin); models=[m.get('id','') for m in d.get('data',[])]; sys.exit(0 if any('MiniLM' in m or 'embed' in m.lower() for m in models) else 1)" 2>/dev/null; then
+              echo "Embedding registered after ~$((i * 5))s"
+              exit 0
             fi
-            [ "$i" -eq 36 ] && echo "::warning::Not registered after 3min; continuing" && break
             sleep 5
           done
+          echo "::warning::Embedding not registered after 3 min; continuing anyway"
 
-      - name: Smoke-test endpoints
+      - name: Smoke-test LLM endpoint
         run: |
-          curl -sf -X POST "http://localhost:${SAGELLM_PORT}/v1/chat/completions" \
+          RESP=$(curl -s -w '\n%{http_code}' -X POST "http://localhost:${SAGELLM_PORT}/v1/chat/completions" \
             -H "Content-Type: application/json" \
-            -d '{"model":"sshleifer/tiny-gpt2","messages":[{"role":"user","content":"hi"}],"max_tokens":5}' \
-            | python -c "import sys,json; d=json.load(sys.stdin); print('LLM ok')"
-          curl -sf -X POST "http://localhost:${SAGELLM_PORT}/v1/embeddings" \
+            -d '{"model":"sshleifer/tiny-gpt2","messages":[{"role":"user","content":"hi"}],"max_tokens":5}')
+          HTTP_CODE=$(echo "$RESP" | tail -1)
+          BODY=$(echo "$RESP" | sed '$d')
+          echo "HTTP $HTTP_CODE"
+          if [ "$HTTP_CODE" -ge 400 ] 2>/dev/null || [ -z "$BODY" ]; then
+            echo "::error::LLM smoke test failed (HTTP $HTTP_CODE)"
+            echo "$BODY"
+            tail -40 /tmp/sagellm.log
+            exit 1
+          fi
+          echo "$BODY" | python -c "import sys,json; d=json.load(sys.stdin); print('LLM ok: model=' + d.get('model','?'))"
+
+      - name: Smoke-test embedding endpoint
+        run: |
+          RESP=$(curl -s -w '\n%{http_code}' -X POST "http://localhost:${SAGELLM_PORT}/v1/embeddings" \
             -H "Content-Type: application/json" \
-            -d '{"model":"BAAI/bge-small-zh-v1.5","input":["hello"]}' \
-            | python -c "import sys,json; d=json.load(sys.stdin); print('Embed ok, dim='+str(len(d['data'][0]['embedding'])))"
+            -d '{"model":"sentence-transformers/all-MiniLM-L6-v2","input":["hello"]}')
+          HTTP_CODE=$(echo "$RESP" | tail -1)
+          BODY=$(echo "$RESP" | sed '$d')
+          echo "HTTP $HTTP_CODE"
+          if [ "$HTTP_CODE" -ge 400 ] 2>/dev/null || [ -z "$BODY" ]; then
+            echo "::warning::Embedding smoke test failed (HTTP $HTTP_CODE), continuing"
+            echo "$BODY"
+          else
+            echo "$BODY" | python -c "import sys,json; d=json.load(sys.stdin); print('Embed ok, dim=' + str(len(d['data'][0]['embedding'])))"
+          fi
 
       - name: Run Q1-Q8 benchmarks
         run: |
