@@ -153,17 +153,26 @@ jobs:
             exit 1
           fi
           echo "LLM engine registered. Waiting for control plane to mark it healthy..."
-          for i in $(seq 1 24); do
-            MODELS=$(curl -s "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || true)
-            if echo "$MODELS" | python -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if any('tiny-gpt2' in m.get('id','') for m in d.get('data',[])) else 1)" 2>/dev/null; then
-              echo "Model sshleifer/tiny-gpt2 visible in /v1/models after ~$((i * 5))s"
+          # The engine is registered with state=STARTING. The lifecycle manager
+          # health-check loop (interval ~10s) must run at least once to transition
+          # the engine to READY before requests can be routed to it.
+          # Wait up to 30s for the lifecycle health check to confirm the engine.
+          HEALTHY=0
+          for i in $(seq 1 6); do
+            sleep 5
+            ENGINE_ID="engine-cpu-${SAGELLM_ENGINE_PORT}"
+            STATUS=$(curl -s "http://localhost:${SAGELLM_PORT}/v1/management/engines/${ENGINE_ID}" 2>/dev/null || true)
+            echo "  Engine status check $i: $STATUS"
+            if echo "$STATUS" | python -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('state') in ('ready','READY') or d.get('is_healthy') == True else 1)" 2>/dev/null; then
+              echo "Engine is healthy and ready after ~$((i * 5))s"
+              HEALTHY=1
               break
             fi
-            if [ "$i" -eq 24 ]; then
-              echo "::warning::tiny-gpt2 not in /v1/models after 2 min; proceeding anyway"
-            fi
-            sleep 5
           done
+          if [ "$HEALTHY" -eq 0 ]; then
+            echo "::warning::Engine not marked ready after 30s; sleeping 3s more and proceeding"
+            sleep 3
+          fi
 
       - name: Wait for embedding engine
         run: |
