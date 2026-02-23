@@ -1,0 +1,135 @@
+name: Benchmark CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      quick:
+        description: "Run in quick (reduced-scale) mode"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      experiments:
+        description: "Experiments to run (comma-separated Q-IDs or 'all')"
+        required: false
+        default: "all"
+  schedule:
+    - cron: "0 2 * * *"
+
+jobs:
+  run-benchmarks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HF_ENDPOINT: https://hf-mirror.com
+      SAGELLM_PORT: 8888
+      SAGELLM_EMBED_PORT: 8890
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "isagellm>=0.5.1.9"
+          python -m pip install -e .
+
+      - name: Start sagellm full stack (CPU + embedding, port ${{ env.SAGELLM_PORT }})
+        run: |
+          sagellm serve \
+            --backend cpu \
+            --model sshleifer/tiny-gpt2 \
+            --port "$SAGELLM_PORT" \
+            --with-embedding \
+            --embedding-model sentence-transformers/all-MiniLM-L6-v2 \
+            --embedding-port "$SAGELLM_EMBED_PORT" \
+            > /tmp/sagellm.log 2>&1 &
+          echo "SAGELLM_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for gateway /health
+        run: |
+          for i in $(seq 1 72); do
+            if curl -sf "http://localhost:${SAGELLM_PORT}/health" > /dev/null 2>&1; then
+              echo "Gateway healthy after ~$((i * 5))s"; break
+            fi
+            [ "$i" -eq 72 ] && { cat /tmp/sagellm.log; exit 1; }
+            sleep 5
+          done
+
+      - name: Wait for embedding engine registration
+        run: |
+          for i in $(seq 1 36); do
+            MODELS=$(curl -sf "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || echo '{}')
+            if echo "$MODELS" | python -c "
+import sys, json
+d = json.load(sys.stdin)
+models = [m.get('id','') for m in d.get('data', [])]
+has_embed = any('MiniLM' in m or 'embed' in m.lower() for m in models)
+sys.exit(0 if has_embed else 1)
+" 2>/dev/null; then
+              echo "Embedding registered after ~$((i * 5))s"; break
+            fi
+            [ "$i" -eq 36 ] && echo "::warning::Not registered after 3min; continuing" && break
+            sleep 5
+          done
+
+      - name: Smoke-test endpoints
+        run: |
+          curl -sf -X POST "http://localhost:${SAGELLM_PORT}/v1/chat/completions" \
+            -H "Content-Type: application/json" \
+            -d '{"model":"sshleifer/tiny-gpt2","messages":[{"role":"user","content":"hi"}],"max_tokens":5}' \
+            | python -c "import sys,json; d=json.load(sys.stdin); print('LLM ok')"
+          curl -sf -X POST "http://localhost:${SAGELLM_PORT}/v1/embeddings" \
+            -H "Content-Type: application/json" \
+            -d '{"model":"BAAI/bge-small-zh-v1.5","input":["hello"]}' \
+            | python -c "import sys,json; d=json.load(sys.stdin); print('Embed ok, dim='+str(len(d['data'][0]['embedding'])))"
+
+      - name: Run Q1-Q8 benchmarks
+        run: |
+          QUICK_FLAG=""
+          [ "${{ github.event.inputs.quick || 'true' }}" = "true" ] && QUICK_FLAG="--quick"
+          EXPERIMENTS="${{ github.event.inputs.experiments || 'all' }}"
+          if [ "$EXPERIMENTS" = "all" ]; then
+            python __main__.py --all $QUICK_FLAG --output-dir results/ci_run
+          else
+            IFS=',' read -ra EXP_LIST <<< "$EXPERIMENTS"
+            for EXP in "${EXP_LIST[@]}"; do
+              python __main__.py --experiment "$(echo "$EXP" | tr -d ' ')" $QUICK_FLAG --output-dir results/ci_run
+            done
+          fi
+
+      - name: Aggregate results
+        run: python scripts/aggregate_for_hf.py
+
+      - name: Commit and push hf_data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add hf_data/
+          git diff --cached --quiet || (git commit -m "ci: benchmark results $(date -u +%Y-%m-%dT%H:%M:%SZ) [run ${{ github.run_id }}]" && git push)
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: results/ci_run
+          if-no-files-found: warn
+
+      - name: Upload sagellm logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sagellm-logs-${{ github.run_id }}
+          path: /tmp/sagellm.log
