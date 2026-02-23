@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "isage-benchmark"
-version = "0.1.1.3"
+dynamic = ["version"]
 description = "SAGE Benchmark - RAG and experimental benchmarks for SAGE framework"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -88,6 +88,9 @@ sage-benchmark-oneclick = "sage_benchmark.oneclick:main"
 [tool.setuptools]
 # Flat-layout repository: install top-level Python packages directly
 packages = ["config", "experiments", "sage_benchmark"]
+
+[tool.setuptools.dynamic]
+version = {attr = "sage_benchmark._version.__version__"}
 
 [tool.setuptools.package-data]
 "sage.benchmark.benchmark_rag" = [

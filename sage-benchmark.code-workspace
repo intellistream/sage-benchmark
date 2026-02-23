@@ -14,6 +14,9 @@
 		},
 		{
 			"path": "../sagellm-control-plane"
+		},
+		{
+			"path": "../sagellm-kv-cache"
 		}
 	],
 	"settings": {}
