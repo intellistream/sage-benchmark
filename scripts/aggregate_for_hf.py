@@ -61,20 +61,51 @@ def download_from_hf(filename: str) -> list[dict]:
         return []
 
 
+def _is_valid_record(record: dict) -> bool:
+    """Returns True if the record has at least some successful results.
+
+    Filters out runs where all requests failed (e.g., gateway not running),
+    identified by throughput=0 AND latency_p99=0 AND success_rate=0.
+    """
+    tp = record.get("throughput")
+    sr = record.get("success_rate")
+    lat = record.get("latency_p99")
+    # A scheduler-style entry has no success_rate; only filter when all three are zeroed out
+    if (
+        tp is not None
+        and float(tp) == 0.0
+        and sr is not None
+        and float(sr) == 0.0
+        and (lat is None or lat == 0)
+    ):
+        return False
+    return True
+
+
 def load_local_results(results_dir: Path) -> list[dict]:
     """递归加载 results/ 目录下的所有 unified_results.jsonl 文件。"""
     all_records: list[dict] = []
 
     for jsonl_file in results_dir.rglob("unified_results.jsonl"):
         try:
+            skipped = 0
             with jsonl_file.open("r", encoding="utf-8") as fh:
                 for line in fh:
                     stripped = line.strip()
                     if not stripped:
                         continue
                     record = json.loads(stripped)
+                    if not _is_valid_record(record):
+                        skipped += 1
+                        continue
                     all_records.append(record)
-            print(f"  ✓ 加载: {jsonl_file.relative_to(results_dir)}")
+            label = f"{jsonl_file.relative_to(results_dir)}"
+            if skipped:
+                print(f"  ✓ 加载: {label} (跳过 {skipped} 条全失败记录)")
+            else:
+                print(f"  ✓ 加载: {label}")
+        except Exception as e:
+            print(f"  ✗ 加载失败: {jsonl_file} - {e}")
         except Exception as e:
             print(f"  ✗ 加载失败: {jsonl_file} - {e}")
 
