@@ -110,30 +110,60 @@ jobs:
       - name: Wait for LLM engine and register
         run: |
           echo "Waiting for LLM engine on port ${SAGELLM_ENGINE_PORT}..."
+          ENGINE_READY=0
           for i in $(seq 1 60); do
             if curl -s -o /dev/null -w '%{http_code}' "http://localhost:${SAGELLM_ENGINE_PORT}/health" 2>/dev/null | grep -q '200'; then
               echo "LLM engine healthy after ~$((i * 5))s"
+              ENGINE_READY=1
               break
-            fi
-            if [ "$i" -eq 60 ]; then
-              echo "::error::LLM engine not healthy after 5 min"
-              echo "--- llm-engine.log ---"
-              cat /tmp/llm-engine.log
-              exit 1
             fi
             sleep 5
           done
-          echo "Registering LLM engine to gateway..."
-          curl -s -w '\n%{http_code}' -X POST "http://localhost:${SAGELLM_PORT}/v1/management/engines/register" \
-            -H 'Content-Type: application/json' \
-            -d "{\"engine_id\":\"engine-cpu-${SAGELLM_ENGINE_PORT}\",\"model_id\":\"sshleifer/tiny-gpt2\",\"host\":\"localhost\",\"port\":${SAGELLM_ENGINE_PORT},\"engine_kind\":\"llm\"}" \
-            | tee /tmp/register-llm.log
-          HTTP_CODE=$(tail -1 /tmp/register-llm.log)
-          if [ "$HTTP_CODE" -ge 400 ] 2>/dev/null; then
-            echo "::error::LLM engine registration failed (HTTP $HTTP_CODE)"
+          if [ "$ENGINE_READY" -eq 0 ]; then
+            echo "::error::LLM engine not healthy after 5 min"
+            echo "--- llm-engine.log ---"
+            cat /tmp/llm-engine.log
             exit 1
           fi
-          echo "LLM engine registered successfully"
+          echo "Registering LLM engine to gateway (with retries)..."
+          REGISTERED=0
+          for attempt in $(seq 1 12); do
+            HTTP_CODE=$(curl -s -o /tmp/register-llm.json -w '%{http_code}' \
+              -X POST "http://localhost:${SAGELLM_PORT}/v1/management/engines/register" \
+              -H 'Content-Type: application/json' \
+              -d "{\"engine_id\":\"engine-cpu-${SAGELLM_ENGINE_PORT}\",\"model_id\":\"sshleifer/tiny-gpt2\",\"host\":\"localhost\",\"port\":${SAGELLM_ENGINE_PORT},\"engine_kind\":\"llm\"}" \
+              2>/dev/null || echo "000")
+            echo "  Attempt $attempt: HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ] 2>/dev/null; then
+              REGISTERED=1
+              break
+            fi
+            # Check if lifecycle manager already auto-registered it
+            MODELS=$(curl -s "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || true)
+            if echo "$MODELS" | python -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if any('tiny-gpt2' in m.get('id','') for m in d.get('data',[])) else 1)" 2>/dev/null; then
+              echo "  Lifecycle manager already registered the model"
+              REGISTERED=1
+              break
+            fi
+            sleep 5
+          done
+          if [ "$REGISTERED" -eq 0 ]; then
+            echo "::error::LLM engine registration failed after 12 attempts"
+            cat /tmp/register-llm.json
+            exit 1
+          fi
+          echo "LLM engine registered. Waiting for control plane to mark it healthy..."
+          for i in $(seq 1 24); do
+            MODELS=$(curl -s "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || true)
+            if echo "$MODELS" | python -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if any('tiny-gpt2' in m.get('id','') for m in d.get('data',[])) else 1)" 2>/dev/null; then
+              echo "Model sshleifer/tiny-gpt2 visible in /v1/models after ~$((i * 5))s"
+              break
+            fi
+            if [ "$i" -eq 24 ]; then
+              echo "::warning::tiny-gpt2 not in /v1/models after 2 min; proceeding anyway"
+            fi
+            sleep 5
+          done
 
       - name: Wait for embedding engine
         run: |
