@@ -3,13 +3,13 @@ name: Benchmark CI
 # Runs Q1–Q8 workloads against the real sagellm CPU backend and uploads
 # results to Hugging Face via the upload-to-hf workflow.
 #
-# Stack:
-#   sagellm serve --backend cpu   →  LLM engine + Gateway on port 8888
-#   scripts/embedding_server.py   →  CPU sentence-transformers on port 8890
-#   POST /v1/management/engines/register  →  link embedding to Gateway CP
-#   python __main__.py --all --quick      →  Q1–Q8 in reduced-scale mode
-#   scripts/aggregate_for_hf.py          →  prepare hf_data/
-#   git push hf_data/                    →  triggers upload-to-hf.yml
+# Stack (single process, no sidecar – closes sage-benchmark#19):
+#   sagellm serve --backend cpu --with-embedding
+#     → Gateway + Control Plane + LLM engine (port 8888)
+#     → CPUEmbeddingEngine auto-started and registered (port 8890)
+#   python __main__.py --all --quick   →  Q1–Q8 reduced-scale
+#   scripts/aggregate_for_hf.py        →  prepare hf_data/
+#   git push hf_data/                  →  triggers upload-to-hf.yml
 
 on:
   workflow_dispatch:
@@ -36,9 +36,8 @@ jobs:
     timeout-minutes: 90
 
     env:
-      # Use hf-mirror for faster downloads inside CI
       HF_ENDPOINT: https://hf-mirror.com
-      SAGELLM_LLM_PORT: 8888
+      SAGELLM_PORT: 8888
       SAGELLM_EMBED_PORT: 8890
 
     steps:
@@ -47,7 +46,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Fetch full history so we can push back hf_data/
           fetch-depth: 0
 
       # ── Python environment ────────────────────────────────────────────────
@@ -60,100 +58,81 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-
-          # sagellm full stack (CPU backend, latest stable release on PyPI)
-          python -m pip install "isagellm>=0.5.1.5"
-
-          # sentence-transformers for the CPU embedding server sidecar
-          python -m pip install "sentence-transformers>=2.7,<4"
-
-          # Benchmark package (installs aiohttp, pyyaml, etc.)
+          # isagellm>=0.5.1.9: ships CPUEmbeddingEngine + sagellm serve --with-embedding
+          python -m pip install "isagellm>=0.5.1.9"
           python -m pip install -e .
 
-      # ── Start LLM gateway ─────────────────────────────────────────────────
-      - name: Start sagellm LLM gateway (CPU, port ${{ env.SAGELLM_LLM_PORT }})
+      # ── Start full stack (LLM + Embedding in one process) ─────────────────
+      - name: Start sagellm full stack (CPU + embedding, port ${{ env.SAGELLM_PORT }})
         run: |
           sagellm serve \
             --backend cpu \
             --model sshleifer/tiny-gpt2 \
-            --port "$SAGELLM_LLM_PORT" \
-            > /tmp/sagellm_gateway.log 2>&1 &
+            --port "$SAGELLM_PORT" \
+            --with-embedding \
+            --embedding-model sentence-transformers/all-MiniLM-L6-v2 \
+            --embedding-port "$SAGELLM_EMBED_PORT" \
+            > /tmp/sagellm.log 2>&1 &
           echo "SAGELLM_PID=$!" >> "$GITHUB_ENV"
-          echo "sagellm gateway started (PID $!)"
-
-      # ── Start embedding server ─────────────────────────────────────────────
-      - name: Start CPU embedding server (port ${{ env.SAGELLM_EMBED_PORT }})
-        run: |
-          python scripts/embedding_server.py \
-            --port "$SAGELLM_EMBED_PORT" \
-            --model sentence-transformers/all-MiniLM-L6-v2 \
-            > /tmp/embedding_server.log 2>&1 &
-          echo "EMBED_PID=$!" >> "$GITHUB_ENV"
-          echo "Embedding server started (PID $!)"
+          echo "sagellm serve started (PID $!)"
 
       # ── Wait for LLM gateway ───────────────────────────────────────────────
-      - name: Wait for LLM gateway /health
+      - name: Wait for gateway /health
         run: |
-          echo "Polling http://localhost:${SAGELLM_LLM_PORT}/health ..."
+          echo "Polling http://localhost:${SAGELLM_PORT}/health ..."
           for i in $(seq 1 72); do
-            if curl -sf "http://localhost:${SAGELLM_LLM_PORT}/health" > /dev/null 2>&1; then
+            if curl -sf "http://localhost:${SAGELLM_PORT}/health" > /dev/null 2>&1; then
               echo "Gateway is healthy after ~$((i * 5))s"
               break
             fi
             if [ "$i" -eq 72 ]; then
               echo "::error::Gateway did not start within 6 minutes"
-              echo "=== Gateway log ===" && cat /tmp/sagellm_gateway.log || true
+              echo "=== sagellm log ===" && cat /tmp/sagellm.log || true
               exit 1
             fi
             sleep 5
           done
 
-      # ── Wait for embedding server ──────────────────────────────────────────
-      - name: Wait for embedding server /health
+      # ── Wait for embedding engine to be registered ─────────────────────────
+      # sagellm --with-embedding starts embedding in background and registers it;
+      # poll /v1/models until the embedding model appears (max 3 min).
+      - name: Wait for embedding engine registration
         run: |
-          echo "Polling http://localhost:${SAGELLM_EMBED_PORT}/health ..."
+          echo "Waiting for embedding engine to register with control plane..."
           for i in $(seq 1 36); do
-            if curl -sf "http://localhost:${SAGELLM_EMBED_PORT}/health" > /dev/null 2>&1; then
-              echo "Embedding server is healthy after ~$((i * 5))s"
+            MODELS=$(curl -sf "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || echo '{}')
+            if echo "$MODELS" | python -c "
+import sys, json
+d = json.load(sys.stdin)
+models = [m.get('id','') for m in d.get('data', [])]
+has_embed = any('MiniLM' in m or 'embed' in m.lower() for m in models)
+print('models:', models)
+sys.exit(0 if has_embed else 1)
+" 2>/dev/null; then
+              echo "Embedding engine registered after ~$((i * 5))s"
               break
             fi
             if [ "$i" -eq 36 ]; then
-              echo "::error::Embedding server did not start within 3 minutes"
-              echo "=== Embedding server log ===" && cat /tmp/embedding_server.log || true
-              exit 1
+              echo "::warning::Embedding engine not registered after 3 min; continuing anyway"
+              break
             fi
             sleep 5
           done
-
-      # ── Register embedding engine with Gateway Control Plane ───────────────
-      - name: Register embedding engine with Gateway
-        run: |
-          REGISTER_RESPONSE=$(curl -sf \
-            -X POST "http://localhost:${SAGELLM_LLM_PORT}/v1/management/engines/register" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"engine_id\": \"embed-cpu-0\",
-              \"model_id\": \"BAAI/bge-small-zh-v1.5\",
-              \"host\": \"localhost\",
-              \"port\": ${SAGELLM_EMBED_PORT},
-              \"engine_kind\": \"embedding\"
-            }")
-          echo "Registration response: $REGISTER_RESPONSE"
 
       # ── Smoke-test both endpoints ──────────────────────────────────────────
       - name: Smoke-test LLM and embedding endpoints
         run: |
           echo "--- LLM smoke test ---"
-          curl -sf -X POST "http://localhost:${SAGELLM_LLM_PORT}/v1/chat/completions" \
+          curl -sf -X POST "http://localhost:${SAGELLM_PORT}/v1/chat/completions" \
             -H "Content-Type: application/json" \
             -d '{"model":"sshleifer/tiny-gpt2","messages":[{"role":"user","content":"hi"}],"max_tokens":5}' \
             | python -c "import sys,json; d=json.load(sys.stdin); print('LLM ok, tokens:', d.get('usage',{}))"
 
           echo "--- Embedding smoke test ---"
-          curl -sf -X POST "http://localhost:${SAGELLM_LLM_PORT}/v1/embeddings" \
+          curl -sf -X POST "http://localhost:${SAGELLM_PORT}/v1/embeddings" \
             -H "Content-Type: application/json" \
             -d '{"model":"BAAI/bge-small-zh-v1.5","input":["hello world"]}' \
-            | python -c "import sys,json; d=json.load(sys.stdin); vecs=d['data']; print(f'Embedding ok, shape: {len(vecs)}x{len(vecs[0][\"embedding\"])}')"
+            | python -c "import sys,json; d=json.load(sys.stdin); vecs=d['data']; print(f'Embedding ok, dim={len(vecs[0][\"embedding\"])}')"
 
       # ── Run Q1–Q8 benchmarks ───────────────────────────────────────────────
       - name: Run Q1–Q8 benchmarks
@@ -167,7 +146,6 @@ jobs:
           if [ "$EXPERIMENTS" = "all" ]; then
             python __main__.py --all $QUICK_FLAG --output-dir results/ci_run
           else
-            # Run comma-separated list: Q1,Q3,Q5 → individual runs
             IFS=',' read -ra EXP_LIST <<< "$EXPERIMENTS"
             for EXP in "${EXP_LIST[@]}"; do
               python __main__.py --experiment "$(echo "$EXP" | tr -d ' ')" $QUICK_FLAG --output-dir results/ci_run
@@ -201,11 +179,9 @@ jobs:
           path: results/ci_run
           if-no-files-found: warn
 
-      - name: Upload server logs (on failure)
+      - name: Upload sagellm logs (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: server-logs-${{ github.run_id }}
-          path: |
-            /tmp/sagellm_gateway.log
-            /tmp/embedding_server.log
+          name: sagellm-logs-${{ github.run_id }}
+          path: /tmp/sagellm.log

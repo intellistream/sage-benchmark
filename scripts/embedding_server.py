@@ -1,14 +1,17 @@
-"""Lightweight CPU embedding server for CI workloads.
+"""Lightweight CPU embedding server (standalone sidecar).
 
 Exposes an OpenAI-compatible /v1/embeddings endpoint backed by a real
-sentence-transformers model running on CPU.  Used by the sagellm-gateway
-control plane to satisfy embedding requests during benchmark runs.
+sentence-transformers model running on CPU.
 
-Usage:
+NOTE: This script is kept for **standalone / local development** use.
+In CI (benchmark-ci.yml), the embedding engine is started automatically
+by ``sagellm serve --with-embedding`` — no manual sidecar needed.
+
+Usage (standalone):
     python scripts/embedding_server.py --port 8890 [--model <hf-model-id>]
 
-The default model is ``sentence-transformers/all-MiniLM-L6-v2`` which is
-small (~90 MB), pure-CPU and freely available on HuggingFace.
+The default model is ``sentence-transformers/all-MiniLM-L6-v2`` (~90 MB,
+pure-CPU, freely available on HuggingFace).
 """
 
 from __future__ import annotations
