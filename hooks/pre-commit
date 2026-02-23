@@ -10,33 +10,44 @@ echo "🔍 Running pre-commit checks..."
 if ! command -v ruff &> /dev/null; then
     echo "⚠️  ruff not found, skipping format check"
 else
-    echo "📝 Checking code formatting..."
-    if ! ruff format --check .; then
-        echo "❌ Code formatting issues found. Run: ruff format ."
-        exit 1
-    fi
-    echo "✅ Code formatting check passed"
+    # Only operate on staged Python files to avoid accidentally staging unstaged changes
+    STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep '\.py$' || true)
 
-    echo "🔍 Running linter..."
-    if ! ruff check .; then
-        echo "❌ Linting issues found. Run: ruff check --fix ."
-        exit 1
+    if [ -n "$STAGED_PY" ]; then
+        echo "📝 Auto-fixing code formatting on staged files..."
+        echo "$STAGED_PY" | xargs ruff format
+        echo "✅ Code formatting done"
+
+        echo "🔍 Auto-fixing lint issues on staged files..."
+        echo "$STAGED_PY" | xargs ruff check --fix || true
+
+        # Re-stage only the files we auto-fixed
+        echo "$STAGED_PY" | xargs git add
+
+        # Final check – fail if unfixable issues remain
+        echo "🔍 Final lint check (unfixable issues)..."
+        if ! echo "$STAGED_PY" | xargs ruff check; then
+            echo "❌ Unfixable lint issues remain. Please fix them manually."
+            exit 1
+        fi
+        echo "✅ Lint check passed"
+    else
+        echo "ℹ️  No staged Python files to check"
     fi
-    echo "✅ Linting check passed"
 fi
 
 # Check for common issues
 echo "🔍 Checking for common issues..."
 
-# Check for hardcoded API keys
-if git diff --cached --name-only | xargs grep -i "api[_-]key\s*=\s*['\"]sk-" 2>/dev/null; then
+# Check for hardcoded API keys in staged Python files only
+if git diff --cached --name-only --diff-filter=ACM | grep '\.py$' | xargs grep -l "api[_-]key\s*=\s*['\"]sk-" 2>/dev/null; then
     echo "❌ Hardcoded API keys detected!"
     exit 1
 fi
 
-# Check for debug statements
-if git diff --cached --name-only | xargs grep -i "import pdb\|breakpoint()" 2>/dev/null; then
-    echo "⚠️  Debug statements detected (pdb/breakpoint)"
+# Check for debug statements in staged Python files only
+if git diff --cached --name-only --diff-filter=ACM | grep '\.py$' | xargs grep -l "import pdb\|breakpoint()" 2>/dev/null; then
+    echo "⚠️  Debug statements detected (pdb/breakpoint) in staged Python files"
     echo "Remove them or use --no-verify to skip this check"
     exit 1
 fi

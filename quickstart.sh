@@ -90,6 +90,21 @@ git submodule status | while read status; do
     fi
 done
 
+# 安装 Git hooks
+echo -e "${BLUE}🔧 安装 Git hooks...${NC}"
+if [ -d "$SCRIPT_DIR/hooks" ]; then
+    for hook_src in "$SCRIPT_DIR/hooks"/*; do
+        hook_name=$(basename "$hook_src")
+        hook_dst="$SCRIPT_DIR/.git/hooks/$hook_name"
+        cp "$hook_src" "$hook_dst"
+        chmod +x "$hook_dst"
+        echo -e "${GREEN}  ✓ $hook_name${NC}"
+    done
+    echo -e "${GREEN}✓ Git hooks 已安装${NC}"
+else
+    echo -e "${YELLOW}  ⚠️  未找到 hooks/ 目录，跳过${NC}"
+fi
+
 echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✨ 初始化完成！${NC}"
