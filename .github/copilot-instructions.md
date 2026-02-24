@@ -6,6 +6,7 @@
 
 ## Critical rules
 - Keep dependency direction: benchmark code may depend on L1-L4, never upward.
+- Do not create new local virtual environments (`venv`/`.venv`); use the existing configured Python environment.
 - Use typed APIs, clear docstrings, and config-driven experiments.
 - Follow prepare/run/finalize experiment lifecycle.
 - Respect submodule boundaries (`benchmark_amm`, `benchmark_anns`, `sage.data`): treat as external repos.

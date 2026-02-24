@@ -12,6 +12,7 @@ tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', '
 
 ## Rules
 - Treat repo as L5 benchmark layer; do not introduce upward dependency violations.
+- Do not create new local virtual environments (`venv`/`.venv`); use the existing configured Python environment.
 - Keep config-driven experiment behavior and typed APIs.
 - Respect submodule boundaries (`benchmark_amm`, `benchmark_anns`, `sage.data`).
 - Fail fast with explicit errors.
