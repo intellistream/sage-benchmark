@@ -7,7 +7,7 @@
 #   - Separate artifact upload
 #
 # Trigger: manual dispatch or nightly schedule
-# Results flow: run benchmarks → aggregate → commit hf_data/ → upload-to-hf.yml
+# Results flow: run benchmarks → aggregate → upload directly to HF Dataset
 
 name: Benchmark CI
 
@@ -235,11 +235,19 @@ jobs:
       - name: Aggregate results
         run: python scripts/aggregate_for_hf.py
 
-      - name: Save hf_data alongside artifacts
-        run: |
-          # Results are published via upload-artifact below.
-          # No git push needed — avoids race-condition rejections on long runs.
-          echo "Benchmark results written to hf_data/ (included in artifact upload)"
+      - name: Install HF upload dependencies
+        run: pip install huggingface_hub
+
+      - name: Merge with latest HF data (conflict resolution)
+        env:
+          HF_REPO: intellistream/sage-benchmark-results
+        run: python scripts/merge_and_upload.py
+
+      - name: Upload to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_ENDPOINT: https://hf-mirror.com
+        run: python scripts/upload_to_hf.py
 
       - name: Upload benchmark artifacts
         if: always()
