@@ -186,7 +186,7 @@ class EmbeddingMapFunction(MapFunction):
         self.timeout = timeout
 
     def execute(self, data: dict) -> dict:
-        """执行 embedding""
+        """执行 embedding"""
         query = data["query"]
 
         with httpx.Client(timeout=self.timeout, proxy=None) as client:

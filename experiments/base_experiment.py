@@ -19,6 +19,7 @@ from importlib import metadata
 from pathlib import Path
 
 import numpy as np
+
 from experiments.common import RequestResult
 from experiments.common.component_versions import (
     collect_component_versions,

@@ -107,8 +107,7 @@ async def embeddings(req: EmbeddingRequest) -> JSONResponse:
     payload = {
         "object": "list",
         "data": [
-            {"object": "embedding", "embedding": vec, "index": i}
-            for i, vec in enumerate(vectors)
+            {"object": "embedding", "embedding": vec, "index": i} for i, vec in enumerate(vectors)
         ],
         "model": _model_name,
         "usage": {

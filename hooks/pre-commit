@@ -24,16 +24,19 @@ else
         # Re-stage only the files we auto-fixed
         echo "$STAGED_PY" | xargs git add
 
-        # Final check – fail if unfixable issues remain
-        echo "🔍 Final lint check (unfixable issues)..."
-        if ! echo "$STAGED_PY" | xargs ruff check; then
-            echo "❌ Unfixable lint issues remain. Please fix them manually."
-            exit 1
-        fi
-        echo "✅ Lint check passed"
+        echo "✅ Staged-file auto-fix done"
     else
-        echo "ℹ️  No staged Python files to check"
+        echo "ℹ️  No staged Python files to auto-fix"
     fi
+
+    # Final check: scan ENTIRE repo (matches CI: ruff check .)
+    # This catches errors in previously committed files too.
+    echo "🔍 Final lint check on entire repo (matches CI)..."
+    if ! ruff check .; then
+        echo "❌ Ruff check failed. Run 'ruff check --fix .' to auto-fix what's possible."
+        exit 1
+    fi
+    echo "✅ Lint check passed"
 fi
 
 # Check for common issues
