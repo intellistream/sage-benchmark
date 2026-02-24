@@ -34,9 +34,7 @@ def collect_component_versions() -> dict[str, str]:
 
     versions: dict[str, str] = {}
     for package in CORE_PACKAGES:
-        versions[package] = installed.get(package, "not-installed")
-
-    return versions
+        versions[package] = installed.get(package, "unknown")
 
 
 def resolve_first_installed_version(

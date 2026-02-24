@@ -39,9 +39,9 @@ jobs:
     timeout-minutes: 90
     env:
       HF_ENDPOINT: https://hf-mirror.com
-      SAGELLM_PORT: 8888
-      SAGELLM_ENGINE_PORT: 8889
-      SAGELLM_EMBED_PORT: 8890
+      SAGELLM_PORT: 8889        # matches SagePorts.GATEWAY_DEFAULT → benchmark default gateway URL
+      SAGELLM_ENGINE_PORT: 8001  # matches SagePorts.LLM_DEFAULT
+      SAGELLM_EMBED_PORT: 8090   # matches SagePorts.EMBEDDING_DEFAULT
     steps:
       - name: Checkout
         uses: actions/checkout@v4
