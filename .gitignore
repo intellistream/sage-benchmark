@@ -51,3 +51,8 @@ outputs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Embedded sub-repos (not submodules, ignore their directories)
+src/sage/data/
+src/sage/benchmark/benchmark_amm/
+src/sage/benchmark/benchmark_anns/
