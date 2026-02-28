@@ -593,7 +593,7 @@ def pipeline_run(config: dict) -> None:
     - embedding_service: BGE Embedding 模型
     - vector_db: FAISS 向量索引
     - refiner_service: LLMLingua-2 压缩模型
-    - llm_service: vLLM/OpenAI 兼容服务
+        - llm_service: sageLLM/OpenAI 兼容服务
 
   Features:
     - BERT-based token classification (快速，无需 LLM 推理)
@@ -640,7 +640,7 @@ def pipeline_run(config: dict) -> None:
     )
 
     # LLM 服务
-    generator_cfg = config.get("generator", {}).get("vllm", {})
+    generator_cfg = config.get("generator", {}).get("sagellm", {})
     register_llm_service(
         env,
         base_url=generator_cfg.get("base_url", _DEFAULT_LLM_URL),

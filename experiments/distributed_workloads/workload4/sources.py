@@ -139,7 +139,7 @@ PLACEHOLDER_VALUES = {
     "medical_term": ["inflammation", "metabolism", "homeostasis", "pathology"],
     "medication": ["insulin", "antibiotics", "antihypertensives", "statins"],
     "technology": ["Docker", "Kubernetes", "GraphQL", "WebAssembly", "5G"],
-    "product": ["SAGE framework", "Flownet cluster", "vLLM", "LangChain", "FastAPI"],
+    "product": ["SAGE framework", "Flownet cluster", "sageLLM", "LangChain", "FastAPI"],
     "system": ["distributed pipeline", "Flownet cluster", "embedding service"],
     "tech1": ["REST API", "gRPC", "WebSocket"],
     "tech2": ["GraphQL", "JSON-RPC", "MQTT"],

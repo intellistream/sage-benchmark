@@ -29,7 +29,7 @@ services without unified semantics for streaming semantic state, refinement, and
 \emph{mixed} workloads where LLM and embedding requests contend for shared accelerators and must be scheduled
 jointly end-to-end.
 
-We present \textbf{SAGE} (Streaming-Augmented Generative Execution), a full-stack system for building LLM inference pipelines that treats the \emph{pipeline}---rather than any single model---as the primary unit of abstraction. SAGE provides a declarative dataflow model that compiles applications into distributed execution plans over heterogeneous CPU/GPU resources, coordinating existing inference engines (e.g., vLLM) with a library of specialized inference components. By elevating retrieval, semantic state, memory, refinement, and tool use to first-class
+We present \textbf{SAGE} (Streaming-Augmented Generative Execution), a full-stack system for building LLM inference pipelines that treats the \emph{pipeline}---rather than any single model---as the primary unit of abstraction. SAGE provides a declarative dataflow model that compiles applications into distributed execution plans over heterogeneous CPU/GPU resources, coordinating existing inference engines (e.g., sageLLM) with a library of specialized inference components. By elevating retrieval, semantic state, memory, refinement, and tool use to first-class
 dataflow stages, SAGE enables end-to-end co-optimization of scheduling, placement, and resource sharing across the entire inference path, rather than optimizing each backend in isolation.
 
 SAGE is structured as a strict five-layer architecture (L1--L5) with downward-only dependencies, separating
@@ -38,7 +38,7 @@ foundational utilities (L1) and platform services (L2) from the streaming runtim
 The system integrates a suite of specialized components commonly required by production pipelines---including
 high-performance vector storage and search (SageVDB), vector-native stream processing for incremental
 semantic state (SageFlow), structured memory backends (NeuroMem), time-series operators, and context
-refinement---all exposed through uniform dataflow operators. For LLM inference, SAGE leverages vLLM as
+refinement---all exposed through uniform dataflow operators. For LLM inference, SAGE leverages sageLLM as
 the backend engine. We defer a detailed component breakdown and interfaces to
 \S\ref{sec:system_overview} and \S\ref{sec:design_details}.
 

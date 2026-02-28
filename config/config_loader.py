@@ -243,7 +243,7 @@ class ConfigLoader:
                     "Q2 ControlMix (control_plane): Mixed LLM+embedding scheduling workload family"
                 ),
                 experiment_section="Q2",
-                baselines=["sage_unified", "vllm_only", "separated"],
+                baselines=["sage_unified", "sagellm_only", "separated"],
             ),
             "Q3": ExperimentConfig(
                 name="q3_noisyneighbor",
