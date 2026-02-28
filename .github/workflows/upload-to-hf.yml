@@ -1,15 +1,16 @@
 name: Upload to Hugging Face
 
-# 当 hf_data/ 下有 JSON 文件变动时自动触发
+# 当 hf_data/ 下有 JSON 文件变动时自动触发（仅 main-dev 分支）
 # 用户工作流：
 #   1. python scripts/aggregate_for_hf.py   （本地聚合）
-#   2. git add hf_data/ && git commit && git push  （触发此 workflow）
+#   2. git add hf_data/ && git commit && git push origin main-dev  （触发此 workflow）
 #   3. Actions 自动：并发安全合并 → 上传 HF → 清理 hf_data/
+#
+# 注意：main 分支不触发此 workflow，benchmark results 不应直接推送到 main。
 
 on:
   push:
     branches:
-      - main
       - main-dev
     paths:
       - "hf_data/**/*.json"

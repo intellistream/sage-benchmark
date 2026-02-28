@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
 from sage.common.config.ports import SagePorts
 
 
