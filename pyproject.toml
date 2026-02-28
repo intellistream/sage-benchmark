@@ -103,6 +103,13 @@ packages = ["config", "experiments", "sage_benchmark"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+exclude = [
+    "src/",          # Untracked submodule / installed package content
+    ".venv/",
+    "venv/",
+    "build/",
+    "dist/",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
