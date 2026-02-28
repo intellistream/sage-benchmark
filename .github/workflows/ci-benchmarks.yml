@@ -1,14 +1,3 @@
-# Benchmark CI for sage-benchmark
-# Runs Q1-Q8 experiments against real sagellm CPU backend
-#
-# Pattern aligned with sagellm-benchmark CI:
-#   - China mirrors for pip & HF
-#   - Robust health checks with diagnostics
-#   - Separate artifact upload
-#
-# Trigger: manual dispatch or nightly schedule
-# Results flow: run benchmarks → aggregate → upload directly to HF Dataset
-
 name: Benchmark CI
 
 on:
@@ -29,19 +18,14 @@ on:
   schedule:
     - cron: "0 2 * * *"
 
-concurrency:
-  group: benchmark-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   run-benchmarks:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
       HF_ENDPOINT: https://hf-mirror.com
-      SAGELLM_PORT: 8889        # matches SagePorts.GATEWAY_DEFAULT → benchmark default gateway URL
-      SAGELLM_ENGINE_PORT: 8001  # matches SagePorts.LLM_DEFAULT
-      SAGELLM_EMBED_PORT: 8090   # matches SagePorts.EMBEDDING_DEFAULT
+      SAGELLM_PORT: 8888
+      SAGELLM_EMBED_PORT: 8890
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -55,32 +39,13 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Configure pip mirror
-        run: |
-          mkdir -p ~/.pip
-          cat > ~/.pip/pip.conf << 'EOF'
-          [global]
-          index-url = https://pypi.tuna.tsinghua.edu.cn/simple
-          trusted-host = pypi.tuna.tsinghua.edu.cn
-          EOF
-
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "isagellm>=0.5.2.0"
+          python -m pip install "isagellm>=0.5.1.9"
           python -m pip install -e .
 
-      - name: Start LLM engine (background)
-        run: |
-          sagellm serve-engine \
-            --engine-kind llm \
-            --backend cpu \
-            --model sshleifer/tiny-gpt2 \
-            --port "$SAGELLM_ENGINE_PORT" \
-            > /tmp/llm-engine.log 2>&1 &
-          echo "LLM_ENGINE_PID=$!" >> "$GITHUB_ENV"
-
-      - name: Start gateway + embedding (background)
+      - name: Start sagellm full stack (CPU + embedding, port ${{ env.SAGELLM_PORT }})
         run: |
           sagellm serve \
             --backend cpu \
@@ -92,131 +57,37 @@ jobs:
             > /tmp/sagellm.log 2>&1 &
           echo "SAGELLM_PID=$!" >> "$GITHUB_ENV"
 
-      - name: Wait for gateway health
+      - name: Wait for gateway /health
         run: |
-          echo "Waiting for gateway on port ${SAGELLM_PORT}..."
           for i in $(seq 1 72); do
-            if curl -s -o /dev/null -w '%{http_code}' "http://localhost:${SAGELLM_PORT}/health" 2>/dev/null | grep -q '200'; then
-              echo "Gateway healthy after ~$((i * 5))s"
-              exit 0
+            if curl -sf "http://localhost:${SAGELLM_PORT}/health" > /dev/null 2>&1; then
+              echo "Gateway healthy after ~$((i * 5))s"; break
             fi
+            [ "$i" -eq 72 ] && { cat /tmp/sagellm.log; exit 1; }
             sleep 5
           done
-          echo "::error::Gateway not healthy after 6 min"
-          echo "--- sagellm.log (last 80 lines) ---"
-          tail -80 /tmp/sagellm.log
-          exit 1
 
-      - name: Wait for LLM engine and register
+      - name: Wait for embedding engine registration
         run: |
-          echo "Waiting for LLM engine on port ${SAGELLM_ENGINE_PORT}..."
-          ENGINE_READY=0
-          for i in $(seq 1 60); do
-            if curl -s -o /dev/null -w '%{http_code}' "http://localhost:${SAGELLM_ENGINE_PORT}/health" 2>/dev/null | grep -q '200'; then
-              echo "LLM engine healthy after ~$((i * 5))s"
-              ENGINE_READY=1
-              break
-            fi
-            sleep 5
-          done
-          if [ "$ENGINE_READY" -eq 0 ]; then
-            echo "::error::LLM engine not healthy after 5 min"
-            echo "--- llm-engine.log ---"
-            cat /tmp/llm-engine.log
-            exit 1
-          fi
-          echo "Registering LLM engine to gateway (with retries)..."
-          REGISTERED=0
-          for attempt in $(seq 1 12); do
-            HTTP_CODE=$(curl -s -o /tmp/register-llm.json -w '%{http_code}' \
-              -X POST "http://localhost:${SAGELLM_PORT}/v1/management/engines/register" \
-              -H 'Content-Type: application/json' \
-              -d "{\"engine_id\":\"engine-cpu-${SAGELLM_ENGINE_PORT}\",\"model_id\":\"sshleifer/tiny-gpt2\",\"host\":\"localhost\",\"port\":${SAGELLM_ENGINE_PORT},\"engine_kind\":\"llm\"}" \
-              2>/dev/null || echo "000")
-            echo "  Attempt $attempt: HTTP $HTTP_CODE"
-            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ] 2>/dev/null; then
-              REGISTERED=1
-              break
-            fi
-            # Check if lifecycle manager already auto-registered it
-            MODELS=$(curl -s "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || true)
-            if echo "$MODELS" | python -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if any('tiny-gpt2' in m.get('id','') for m in d.get('data',[])) else 1)" 2>/dev/null; then
-              echo "  Lifecycle manager already registered the model"
-              REGISTERED=1
-              break
-            fi
-            sleep 5
-          done
-          if [ "$REGISTERED" -eq 0 ]; then
-            echo "::error::LLM engine registration failed after 12 attempts"
-            cat /tmp/register-llm.json
-            exit 1
-          fi
-          echo "LLM engine registered. Waiting for control plane to mark it healthy..."
-          # The engine is registered with state=STARTING. The lifecycle manager
-          # health-check loop (interval ~10s) must run at least once to transition
-          # the engine to READY before requests can be routed to it.
-          # Wait up to 30s for the lifecycle health check to confirm the engine.
-          HEALTHY=0
-          for i in $(seq 1 6); do
-            sleep 5
-            ENGINE_ID="engine-cpu-${SAGELLM_ENGINE_PORT}"
-            STATUS=$(curl -s "http://localhost:${SAGELLM_PORT}/v1/management/engines/${ENGINE_ID}" 2>/dev/null || true)
-            echo "  Engine status check $i: $STATUS"
-            if echo "$STATUS" | python -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('state') in ('ready','READY') or d.get('is_healthy') == True else 1)" 2>/dev/null; then
-              echo "Engine is healthy and ready after ~$((i * 5))s"
-              HEALTHY=1
-              break
-            fi
-          done
-          if [ "$HEALTHY" -eq 0 ]; then
-            echo "::warning::Engine not marked ready after 30s; sleeping 3s more and proceeding"
-            sleep 3
-          fi
-
-      - name: Wait for embedding engine
-        run: |
-          echo "Waiting for embedding model registration..."
           for i in $(seq 1 36); do
-            RESP=$(curl -s "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || true)
-            if [ -n "$RESP" ] && echo "$RESP" | python -c "import sys,json; d=json.load(sys.stdin); models=[m.get('id','') for m in d.get('data',[])]; sys.exit(0 if any('MiniLM' in m or 'embed' in m.lower() for m in models) else 1)" 2>/dev/null; then
-              echo "Embedding registered after ~$((i * 5))s"
-              exit 0
+            MODELS=$(curl -sf "http://localhost:${SAGELLM_PORT}/v1/models" 2>/dev/null || echo '{}')
+            if echo "$MODELS" | python -c "import sys,json; d=json.load(sys.stdin); models=[m.get('id','') for m in d.get('data',[])]; sys.exit(0 if any('MiniLM' in m or 'embed' in m.lower() for m in models) else 1)" 2>/dev/null; then
+              echo "Embedding registered after ~$((i * 5))s"; break
             fi
+            [ "$i" -eq 36 ] && echo "::warning::Not registered after 3min; continuing" && break
             sleep 5
           done
-          echo "::warning::Embedding not registered after 3 min; continuing anyway"
 
-      - name: Smoke-test LLM endpoint
+      - name: Smoke-test endpoints
         run: |
-          RESP=$(curl -s -w '\n%{http_code}' -X POST "http://localhost:${SAGELLM_PORT}/v1/chat/completions" \
+          curl -sf -X POST "http://localhost:${SAGELLM_PORT}/v1/chat/completions" \
             -H "Content-Type: application/json" \
-            -d '{"model":"sshleifer/tiny-gpt2","messages":[{"role":"user","content":"hi"}],"max_tokens":5}')
-          HTTP_CODE=$(echo "$RESP" | tail -1)
-          BODY=$(echo "$RESP" | sed '$d')
-          echo "HTTP $HTTP_CODE"
-          if [ "$HTTP_CODE" -ge 400 ] 2>/dev/null || [ -z "$BODY" ]; then
-            echo "::error::LLM smoke test failed (HTTP $HTTP_CODE)"
-            echo "$BODY"
-            tail -40 /tmp/sagellm.log
-            exit 1
-          fi
-          echo "$BODY" | python -c "import sys,json; d=json.load(sys.stdin); print('LLM ok: model=' + d.get('model','?'))"
-
-      - name: Smoke-test embedding endpoint
-        run: |
-          RESP=$(curl -s -w '\n%{http_code}' -X POST "http://localhost:${SAGELLM_PORT}/v1/embeddings" \
+            -d '{"model":"sshleifer/tiny-gpt2","messages":[{"role":"user","content":"hi"}],"max_tokens":5}' \
+            | python -c "import sys,json; d=json.load(sys.stdin); print('LLM ok')"
+          curl -sf -X POST "http://localhost:${SAGELLM_PORT}/v1/embeddings" \
             -H "Content-Type: application/json" \
-            -d '{"model":"sentence-transformers/all-MiniLM-L6-v2","input":["hello"]}')
-          HTTP_CODE=$(echo "$RESP" | tail -1)
-          BODY=$(echo "$RESP" | sed '$d')
-          echo "HTTP $HTTP_CODE"
-          if [ "$HTTP_CODE" -ge 400 ] 2>/dev/null || [ -z "$BODY" ]; then
-            echo "::warning::Embedding smoke test failed (HTTP $HTTP_CODE), continuing"
-            echo "$BODY"
-          else
-            echo "$BODY" | python -c "import sys,json; d=json.load(sys.stdin); print('Embed ok, dim=' + str(len(d['data'][0]['embedding'])))"
-          fi
+            -d '{"model":"BAAI/bge-small-zh-v1.5","input":["hello"]}' \
+            | python -c "import sys,json; d=json.load(sys.stdin); print('Embed ok, dim='+str(len(d['data'][0]['embedding'])))"
 
       - name: Run Q1-Q8 benchmarks
         run: |
@@ -235,28 +106,12 @@ jobs:
       - name: Aggregate results
         run: python scripts/aggregate_for_hf.py
 
-      - name: Install HF upload dependencies
-        run: pip install huggingface_hub
-
-      - name: Merge with latest HF data (conflict resolution)
-        env:
-          HF_REPO: intellistream/sage-benchmark-results
-        run: python scripts/merge_and_upload.py
-
-      - name: Upload to Hugging Face
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_ENDPOINT: https://hf-mirror.com
-        run: python scripts/upload_to_hf.py
-
       - name: Upload benchmark artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results-${{ github.run_id }}
-          path: |
-            results/ci_run
-            hf_data/
+          path: results/ci_run
           if-no-files-found: warn
 
       - name: Upload sagellm logs (on failure)
