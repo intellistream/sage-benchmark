@@ -1,119 +1,147 @@
-#!/bin/bash
-# 🚀 SAGE Benchmark 快速初始化脚本
-# 自动初始化所有 Git 子模块
+#!/usr/bin/env bash
+# quickstart.sh — sage-benchmark dev environment setup
+#
+# Usage:
+#   ./quickstart.sh               # dev mode (default): submodules + hooks + .[dev]  (includes [full])
+#   ./quickstart.sh --full        # ML/DB backends only: .[full]
+#   ./quickstart.sh --standard    # core deps only: no extras
+#   ./quickstart.sh --yes         # non-interactive (assume yes)
+#   ./quickstart.sh --doctor      # diagnose environment issues
+#
+# Install matrix:
+#   (default / --dev)  pip install -e .[dev]   ← includes [full] via self-ref
+#   --full             pip install -e .[full]
+#   --standard         pip install -e .
+#
+# Rules:
+#   - NEVER creates a new venv. Must be called in an existing non-venv environment.
+#   - Installs hooks via direct copy from hooks/.
 
 set -e
 
-# 颜色定义
+# ─── Colors ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
-GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-DIM='\033[2m'
+BOLD='\033[1m'
+NC='\033[0m'
 
-# 获取脚本所在目录
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}  🚀 SAGE Benchmark 快速初始化${NC}"
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-
-# 检查是否在正确的目录
-if [ ! -f "$SCRIPT_DIR/pyproject.toml" ]; then
-    echo -e "${RED}❌ 错误: 请在 sage-benchmark 根目录运行此脚本${NC}"
-    exit 1
-fi
-
-# 检查 git 是否安装
-if ! command -v git &> /dev/null; then
-    echo -e "${RED}❌ 错误: 未安装 git${NC}"
-    echo -e "${DIM}请安装 git: sudo apt-get install git${NC}"
-    exit 1
-fi
-
-# 检查是否是 git 仓库
-if [ ! -d "$SCRIPT_DIR/.git" ]; then
-    echo -e "${RED}❌ 错误: 当前目录不是 git 仓库${NC}"
-    exit 1
-fi
-
-echo -e "${GREEN}✓ 环境检查通过${NC}"
-echo ""
-
-# 避免 Git LFS 自动拉取大文件
-if [ -z "${GIT_LFS_SKIP_SMUDGE+x}" ]; then
-    export GIT_LFS_SKIP_SMUDGE=1
-    echo -e "${DIM}已设置 GIT_LFS_SKIP_SMUDGE=1 (跳过 LFS 大文件)${NC}"
-fi
-
-# 初始化子模块
-echo -e "${BLUE}🔄 初始化 Git 子模块...${NC}"
-echo -e "${DIM}将初始化以下子模块:${NC}"
-echo -e "${DIM}  - src/sage/benchmark/benchmark_amm  (LibAMM)${NC}"
-echo -e "${DIM}  - src/sage/benchmark/benchmark_anns (SAGE-DB-Bench)${NC}"
-echo -e "${DIM}  - src/sage/data                      (sageData)${NC}"
-echo ""
-
-cd "$SCRIPT_DIR"
-
-# 初始化子模块（并行加速）
-if git submodule status | grep -q '^-'; then
-    echo -e "${YELLOW}⚙️  初始化未初始化的子模块...${NC}"
-    git submodule update --init --jobs 4
-    echo -e "${GREEN}✓ 子模块初始化完成${NC}"
-else
-    echo -e "${GREEN}✓ 子模块已初始化${NC}"
-
-    # 检查是否需要更新
-    echo -e "${BLUE}🔄 检查子模块更新...${NC}"
-    git submodule update --jobs 4
-    echo -e "${GREEN}✓ 子模块已更新${NC}"
-fi
-
-echo ""
-
-# 显示子模块状态
-echo -e "${BLUE}📊 子模块状态:${NC}"
-git submodule status | while read status; do
-    commit=$(echo $status | awk '{print $1}')
-    path=$(echo $status | awk '{print $2}')
-    branch=$(echo $status | awk '{print $3}' | sed 's/[()]//g')
-
-    if [[ $commit == -* ]]; then
-        echo -e "${YELLOW}  ⚠️  $path - 未初始化${NC}"
-    elif [[ $commit == +* ]]; then
-        echo -e "${YELLOW}  ⚠️  $path - 未提交的更改${NC}"
-    else
-        echo -e "${GREEN}  ✓ $path - $branch${NC}"
-    fi
+# ─── Arguments ────────────────────────────────────────────────────────────────
+EXTRAS="[dev]"   # default — dev includes [full] via pyproject self-reference
+DOCTOR=false
+YES=false
+for arg in "$@"; do
+    case "$arg" in
+        --doctor)   DOCTOR=true ;;
+        --standard) EXTRAS="" ;;
+        --full)     EXTRAS="[full]" ;;
+        --dev)      EXTRAS="[dev]" ;;
+        --yes|-y)   YES=true ;;
+    esac
 done
 
-# 安装 Git hooks
-echo -e "${BLUE}🔧 安装 Git hooks...${NC}"
-if [ -d "$SCRIPT_DIR/hooks" ]; then
-    for hook_src in "$SCRIPT_DIR/hooks"/*; do
-        hook_name=$(basename "$hook_src")
-        hook_dst="$SCRIPT_DIR/.git/hooks/$hook_name"
-        cp "$hook_src" "$hook_dst"
-        chmod +x "$hook_dst"
-        echo -e "${GREEN}  ✓ $hook_name${NC}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
+
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BOLD}${BLUE}  sage-benchmark — Quick Start${NC}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+# ─── Doctor ───────────────────────────────────────────────────────────────────
+if [ "$DOCTOR" = true ]; then
+    echo -e "${BOLD}${BLUE}Environment Diagnosis${NC}"
+    echo ""
+    echo -e "${YELLOW}Python:${NC} $(python3 --version 2>/dev/null || echo 'NOT FOUND')"
+    echo -e "${YELLOW}Conda env:${NC} ${CONDA_DEFAULT_ENV:-none}"
+    echo -e "${YELLOW}Venv:${NC} ${VIRTUAL_ENV:-none}"
+    echo -e "${YELLOW}ruff:${NC} $(ruff --version 2>/dev/null || echo 'NOT FOUND')"
+    echo -e "${YELLOW}pytest:${NC} $(pytest --version 2>/dev/null || echo 'NOT FOUND')"
+    echo ""
+    echo -e "${YELLOW}Git hooks installed:${NC}"
+    for h in pre-commit pre-push post-commit; do
+        if [ -f "$PROJECT_ROOT/.git/hooks/$h" ]; then
+            echo -e "  ${GREEN}✓ $h${NC}"
+        else
+            echo -e "  ${RED}✗ $h${NC}"
+        fi
     done
-    echo -e "${GREEN}✓ Git hooks 已安装${NC}"
-else
-    echo -e "${YELLOW}  ⚠️  未找到 hooks/ 目录，跳过${NC}"
+    exit 0
 fi
 
+# ─── Step 0: Require an active non-venv environment ──────────────────────────
+if [ -n "$VIRTUAL_ENV" ]; then
+    echo -e "${RED}  ❌ Detected Python venv: $VIRTUAL_ENV${NC}"
+    echo -e "${YELLOW}  → This repository forbids venv/.venv usage.${NC}"
+    echo -e "${YELLOW}  → Please deactivate the venv and use Conda or a system Python.${NC}"
+    exit 1
+fi
+
+# ─── Step 1/4: Python version check ──────────────────────────────────────────
+echo -e "${YELLOW}${BOLD}Step 1/4: Checking Python environment${NC}"
+PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "unknown")
+echo -e "  Python version: ${CYAN}${PYTHON_VERSION}${NC}"
+if python3 -c "import sys; exit(0 if sys.version_info >= (3,10) else 1)" 2>/dev/null; then
+    echo -e "  ${GREEN}✓ Python ≥ 3.10${NC}"
+else
+    echo -e "  ${RED}✗ Python 3.10+ required (found ${PYTHON_VERSION})${NC}"
+    exit 1
+fi
 echo ""
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}✨ 初始化完成！${NC}"
-echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# ─── Step 2/4: Git submodules ────────────────────────────────────────────────
+echo -e "${YELLOW}${BOLD}Step 2/4: Initialising Git submodules${NC}"
+cd "$PROJECT_ROOT"
+if [ -z "${GIT_LFS_SKIP_SMUDGE+x}" ]; then
+    export GIT_LFS_SKIP_SMUDGE=1
+fi
+if git submodule status 2>/dev/null | grep -q '^-'; then
+    echo -e "  Initialising uninitialised submodules …"
+    git submodule update --init --jobs 4
+else
+    git submodule update --jobs 4 2>/dev/null || true
+fi
+echo -e "  ${GREEN}✓ Submodules ready${NC}"
 echo ""
-echo -e "${DIM}下一步:${NC}"
-echo -e "  1. 安装依赖: ${BLUE}pip install isage && pip install -e .${NC}"
-echo -e "  2. 或使用虚拟环境: ${BLUE}python -m venv venv && source venv/bin/activate && pip install isage && pip install -e .${NC}"
+
+# ─── Step 3/4: Install Git Hooks ─────────────────────────────────────────────
+echo -e "${YELLOW}${BOLD}Step 3/4: Installing Git hooks${NC}"
+if [ -d "$PROJECT_ROOT/hooks" ]; then
+    installed=0
+    for hook_src in "$PROJECT_ROOT/hooks"/*; do
+        hook_name=$(basename "$hook_src")
+        hook_dst="$PROJECT_ROOT/.git/hooks/$hook_name"
+        cp "$hook_src" "$hook_dst"
+        chmod +x "$hook_dst"
+        echo -e "  ${GREEN}✓ $hook_name${NC}"
+        installed=$((installed + 1))
+    done
+    echo -e "${GREEN}✓ $installed hook(s) installed${NC}"
+else
+    echo -e "${YELLOW}⚠  hooks/ directory not found — skipping${NC}"
+fi
 echo ""
-echo -e "${DIM}运行测试:${NC}"
-echo -e "  ${BLUE}pytest tests/${NC}"
+
+# ─── Step 4/4: Install package ───────────────────────────────────────────────
+echo -e "${YELLOW}${BOLD}Step 4/4: Installing package (editable)${NC}"
+if [ -n "$EXTRAS" ]; then
+    echo -e "  ${CYAN}pip install -e .${EXTRAS}${NC}"
+    pip install -e ".${EXTRAS}"
+else
+    echo -e "  ${CYAN}pip install -e .${NC}  (standard — no extras)"
+    pip install -e .
+fi
+echo -e "${GREEN}✓ Package installed in editable mode${EXTRAS:+ with extras: $EXTRAS}${NC}"
+echo ""
+
+echo -e "${GREEN}${BOLD}✓ Setup complete!${NC}"
+echo ""
+echo -e "${BLUE}${BOLD}Next steps:${NC}"
+echo -e "  ${CYAN}pytest tests/${NC}                    — run tests (requires [full] extras)"
+echo -e "  ${CYAN}ruff check src/${NC}                  — lint"
+echo -e "  ${CYAN}./quickstart.sh --full${NC}           — reinstall with ML/DB backends"
+echo -e "  ${CYAN}./quickstart.sh --standard${NC}       — install core deps only (no extras)"
+echo -e "  ${CYAN}./quickstart.sh --doctor${NC}         — diagnose environment"
 echo ""
