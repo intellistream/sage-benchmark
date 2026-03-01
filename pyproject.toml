@@ -45,20 +45,17 @@ dependencies = [
     # Note: sage.data is included as a submodule in src/sage/data
     # and will be installed as part of this package
 
-    # ML dependencies (sentence-transformers compatible with transformers 4.38+)
-    "sentence-transformers>=3.1.0,<4.0.0",
-
-    # RAG and benchmark dependencies
+    # Lightweight benchmark utilities
     "pyyaml>=6.0",
-    "chromadb>=1.0.20",
-    "pymilvus[model]>=2.4.0",
-    "faiss-cpu>=1.7.0,<2.0.0",
     "pandas>=2.0.0",
     "numpy>=1.26.0,<2.3.0",
 
-    # Visualization dependencies (required by benchmark_refiner, benchmark_control_plane)
+    # Visualization
     "matplotlib>=3.7.0",
     "seaborn>=0.12.0",
+
+    # NOTE: ML backend deps (sentence-transformers, faiss-cpu, chromadb, pymilvus)
+    # are NOT listed here. Use [full] extras: pip install -e .[dev,full]
 ]
 
 license = {text = "MIT"}
@@ -69,6 +66,16 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
     "ruff==0.14.6",  # Pinned to match tools/pre-commit-config.yaml
+]
+# Install all optional ML backends to run the full test suite:
+#   pip install -e .[dev,full]
+full = [
+    # Embedding / retrieval stack
+    "sentence-transformers>=3.1.0,<4.0.0",
+    "faiss-cpu>=1.7.0,<2.0.0",
+    # Vector DB backends
+    "chromadb>=1.0.20",
+    "pymilvus[model]>=2.4.0",
 ]
 
 [project.urls]
