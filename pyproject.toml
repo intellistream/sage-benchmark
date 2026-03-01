@@ -1,8 +1,5 @@
 [build-system]
-requires = [
-    "setuptools>=64",
-    "wheel",
-]
+requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,9 +8,7 @@ dynamic = ["version"]
 description = "SAGE Benchmark - RAG and experimental benchmarks for SAGE framework"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [
-    { name = "IntelliStream Team", email = "shuhao_zhang@hust.edu.cn" },
-]
+authors = [{ name = "IntelliStream Team", email = "shuhao_zhang@hust.edu.cn" }]
 keywords = [
     "sage",
     "benchmark",
@@ -37,9 +32,9 @@ dependencies = [
     # SAGE dependencies from PyPI
     # Version compatibility: middleware 0.2.3 and libs 0.2.0.6 both require transformers>=4.52.0,<4.54.0
     "isage-common>=0.2.3",
-    "isage-platform>=0.2.3",  # Provides sage.platform.runtime required by experiment runners
+    "isage-platform>=0.2.3",   # Provides sage.platform.runtime required by experiment runners
     "isage-kernel>=0.2.3",
-    "isage-middleware>=0.2.3",  # Must be >=0.2.3 for transformers compatibility with libs
+    "isage-middleware>=0.2.3", # Must be >=0.2.3 for transformers compatibility with libs
     "isage-libs>=0.2.0.6",
 
     # Note: sage.data is included as a submodule in src/sage/data
@@ -58,7 +53,7 @@ dependencies = [
     # are NOT listed here. Use [full] extras: pip install -e .[dev,full]
 ]
 
-license = {text = "MIT"}
+license = { text = "MIT" }
 
 [project.optional-dependencies]
 # Install ML/vector-DB backends for benchmarks:
@@ -79,7 +74,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
-    "ruff==0.14.6",  # Pinned to match tools/pre-commit-config.yaml
+    "ruff==0.14.6",           # Pinned to match tools/pre-commit-config.yaml
 ]
 
 [project.urls]
@@ -101,7 +96,7 @@ sage-benchmark-oneclick = "sage_benchmark.oneclick:main"
 packages = ["config", "experiments", "sage_benchmark"]
 
 [tool.setuptools.dynamic]
-version = {attr = "sage_benchmark._version.__version__"}
+version = { attr = "sage_benchmark._version.__version__" }
 
 [tool.setuptools.package-data]
 "sage.benchmark.benchmark_rag" = [
@@ -118,7 +113,7 @@ version = {attr = "sage_benchmark._version.__version__"}
 line-length = 100
 target-version = "py310"
 exclude = [
-    "src/",          # Untracked submodule / installed package content
+    "src/",   # Untracked submodule / installed package content
     ".venv/",
     "venv/",
     "build/",
@@ -128,43 +123,37 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 ignore = [
-    "E501",   # Line too long (handled by formatter)
-    "F401",   # Unused imports (handled by isort/pre-commit)
-    "F403",   # Star imports (legacy code)
-    "F405",   # Undefined from star imports (legacy code)
-    "F841",   # Unused local variable (may be intentional)
-    "E712",   # Comparison to True/False (may be intentional for clarity)
-    "E402",   # Module level import not at top (may be necessary)
-    "E741",   # Ambiguous variable names (legacy code)
-    "E722",   # Bare except (legacy code, needs careful refactoring)
-    "W293",   # Blank line with whitespace (handled by trailing-whitespace hook)
+    "E501", # Line too long (handled by formatter)
+    "F401", # Unused imports (handled by isort/pre-commit)
+    "F403", # Star imports (legacy code)
+    "F405", # Undefined from star imports (legacy code)
+    "F841", # Unused local variable (may be intentional)
+    "E712", # Comparison to True/False (may be intentional for clarity)
+    "E402", # Module level import not at top (may be necessary)
+    "E741", # Ambiguous variable names (legacy code)
+    "E722", # Bare except (legacy code, needs careful refactoring)
+    "W293", # Blank line with whitespace (handled by trailing-whitespace hook)
 ]
 
 # Exclude submodules and external code
 [tool.ruff.lint.per-file-ignores]
-"src/sage/benchmark/benchmark_amm/**" = ["F", "E", "W"]  # LibAMM submodule
-"src/sage/benchmark/benchmark_anns/**" = ["F", "E", "W"]  # SAGE-DB-Bench submodule
-"src/sage/data/**" = ["F", "E", "W"]  # sageData submodule
+"src/sage/benchmark/benchmark_amm/**" = ["F", "E", "W"] # LibAMM submodule
+"src/sage/benchmark/benchmark_anns/**" = [
+    "F",
+    "E",
+    "W",
+] # SAGE-DB-Bench submodule
+"src/sage/data/**" = ["F", "E", "W"] # sageData submodule
 
 [tool.mypy]
 cache_dir = "../../.sage/cache/mypy"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-testpaths = [
-    "tests",
-    "src",
-]
-python_files = [
-    "test_*.py",
-    "*_test.py",
-]
-python_classes = [
-    "Test*",
-]
-python_functions = [
-    "test_*",
-]
+testpaths = ["tests", "src"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 addopts = [
     "--benchmark-storage=../../.sage/benchmarks",
     "-o",
@@ -183,14 +172,8 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = [
-    "src/sage",
-]
-omit = [
-    "*/tests/*",
-    "*/test_*.py",
-    "*/_test_*.py",
-]
+source = ["src/sage"]
+omit = ["*/tests/*", "*/test_*.py", "*/_test_*.py"]
 
 [tool.coverage.report]
 exclude_lines = [
