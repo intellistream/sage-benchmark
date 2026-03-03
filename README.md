@@ -12,7 +12,7 @@ Generation) examples for evaluating SAGE framework performance. This package ena
 developers to:
 
 - **Benchmark RAG pipelines** with multiple retrieval strategies (dense, sparse, hybrid)
-- **Compare vector databases** (Milvus, ChromaDB, FAISS) for RAG applications
+- **Compare vector databases** (SageVDB, Milvus, FAISS) for RAG applications
 - **Evaluate multimodal retrieval** with text, image, and video data
 - **Run reproducible experiments** with standardized configurations and metrics
 
@@ -21,7 +21,7 @@ This package is designed for both research experiments and production system eva
 ## ✨ Key Features
 
 - **Multiple RAG Implementations**: Dense, sparse, hybrid, and multimodal retrieval
-- **Vector Database Support**: Milvus, ChromaDB, FAISS integration
+- **Vector Database Support**: SageVDB, Milvus, FAISS integration
 - **Experiment Framework**: Automated benchmarking with configurable experiments
 - **Evaluation Metrics**: Comprehensive metrics for RAG performance
 - **Sample Data**: Included test data for quick start
@@ -44,7 +44,7 @@ sage-benchmark/
 │               │   │   ├── qa_multimodal_fusion.py
 │               │   │   └── ...
 │               │   └── tools/          # Supporting tools
-│               │       ├── build_chroma_index.py
+│               │       ├── build_sagevdb_index.py
 │               │       ├── build_milvus_dense_index.py
 │               │       └── loaders/
 │               ├── evaluation/          # Experiment framework
@@ -163,8 +163,8 @@ Various RAG approaches for performance comparison:
 
 **Vector Databases:**
 
+- **SageVDB**: Native SAGE vector database backend
 - **Milvus**: Dense, sparse, and hybrid retrieval
-- **ChromaDB**: Local vector database with simple setup
 - **FAISS**: Efficient similarity search
 
 **Retrieval Methods:**
@@ -181,10 +181,7 @@ Various RAG approaches for performance comparison:
 First, prepare your vector index:
 
 ```bash
-# Build ChromaDB index (simplest)
-python -m sage.benchmark.benchmark_rag.implementations.tools.build_chroma_index
-
-# Or build Milvus dense index
+# Build Milvus dense index
 python -m sage.benchmark.benchmark_rag.implementations.tools.build_milvus_dense_index
 ```
 
@@ -272,7 +269,7 @@ Configuration files are located in `sage/benchmark/benchmark_rag/config/`:
 - `config_dense_milvus.yaml` - Dense retrieval configuration
 - `config_sparse_milvus.yaml` - Sparse retrieval configuration
 - `config_hybrid_milvus.yaml` - Hybrid retrieval configuration
-- `config_qa_chroma.yaml` - ChromaDB configuration
+- `config_dense_milvus.yaml` - Milvus dense retrieval configuration
 
 Experiment configurations in `sage/benchmark/benchmark_rag/evaluation/config/`:
 
@@ -337,7 +334,7 @@ This project is licensed under the MIT License - see the [LICENSE](../../LICENSE
 
 - **sage-kernel**: Core computation engine for running benchmarks
 - **sage-libs**: RAG components and utilities
-- **sage-middleware**: Vector database services (Milvus, ChromaDB)
+- **sage-middleware**: Vector database services (SageVDB, Milvus)
 - **sage-common**: Common utilities and data types
 
 ## 📮 Support

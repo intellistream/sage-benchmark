@@ -1250,7 +1250,7 @@ class SimpleRetriever(MapFunction):
     简单检索器 - 使用远程 Embedding 服务。
 
     基于余弦相似度检索最相关的文档。
-    不依赖 ChromaDB 或本地模型。
+    不依赖特定向量数据库或本地模型。
     """
 
     def __init__(

@@ -790,12 +790,6 @@ class SchedulingBenchmarkPipeline:
                 "documents_path": getattr(self.config, "wiki18_documents_path", None),
                 "mapping_path": getattr(self.config, "wiki18_mapping_path", None),
             }
-        else:
-            # 简单检索器配置 (使用 ChromaDB 或远程 embedding)
-            base_config["chroma"] = {
-                "collection_name": "benchmark_knowledge",
-                "persist_directory": None,
-            }
 
         return base_config
 

@@ -81,10 +81,9 @@ class BaseRAGStrategyFunction(MapFunction):
         """获取检索器（延迟初始化）"""
         if self.retriever is None:
             try:
-                # 尝试使用 SAGE 的默认检索器
-                from sage.middleware.operators.rag import ChromaRetriever
+                from sage.middleware.operators.rag import MilvusDenseRetriever
 
-                self.retriever = ChromaRetriever(config=self.config.get("retriever", {}))
+                self.retriever = MilvusDenseRetriever(config=self.config.get("retriever", {}))
             except ImportError:
                 # 使用简单的模拟检索器
                 self.retriever = SimpleRetriever()

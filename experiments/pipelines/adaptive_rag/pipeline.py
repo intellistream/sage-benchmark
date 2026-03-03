@@ -66,7 +66,7 @@ class PipelineConfig:
     iterative_retrieval_config: dict[str, Any] = field(default_factory=dict)
 
     # 检索器配置
-    retriever_type: str = "simple"  # "simple", "chroma", "milvus"
+    retriever_type: str = "simple"  # "simple", "milvus", "wiki18_faiss"
     retriever_config: dict[str, Any] = field(default_factory=dict)
 
     # LLM 配置
