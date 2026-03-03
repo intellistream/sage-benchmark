@@ -64,7 +64,7 @@ def register_embedding_service(
     使用 UnifiedInferenceClient 或 EmbeddingFactory。
     """
     try:
-        from sage.common.components.sage_embedding import EmbeddingClientAdapter, EmbeddingFactory
+        from sagellm.embedding import EmbeddingClientAdapter, EmbeddingFactory
 
         # 创建 embedding 服务包装类
         class EmbeddingService:
@@ -78,9 +78,7 @@ def register_embedding_service(
 
             def _ensure_initialized(self):
                 if self._embedder is None:
-                    raw_embedder = EmbeddingFactory.create(
-                        "hf", model=self.model_name, device=self.device
-                    )
+                    raw_embedder = EmbeddingFactory.create("hash", dim=1024)
                     self._client = EmbeddingClientAdapter(raw_embedder)
                     self._embedder = raw_embedder
 
