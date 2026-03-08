@@ -339,7 +339,7 @@ This project is licensed under the MIT License - see the [LICENSE](../../LICENSE
 
 ## 📮 Support
 
-- **Documentation**: https://intellistream.github.io/SAGE-Pub/guides/packages/sage-benchmark/
+- **Documentation**: https://intellistream.github.io/sage-docs/guides/packages/sage-benchmark/
 - **Issues**: https://github.com/intellistream/SAGE/issues
 - **Discussions**: https://github.com/intellistream/SAGE/discussions
 
