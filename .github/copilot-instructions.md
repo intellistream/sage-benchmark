@@ -1,11 +1,11 @@
 # SAGE Benchmark Copilot Instructions
 
 ## Scope
-- `isage-benchmark` is an L5 benchmarking suite across SAGE subsystems.
+- `isage-benchmark` is an independent benchmarking repository that sits above the core SAGE workspace layers and evaluates SAGE subsystems end-to-end.
 - Benchmark modules live under `src/sage/benchmark/...` with pytest tests.
 
 ## Critical rules
-- Keep dependency direction: benchmark code may depend on L1-L4, never upward.
+- Keep dependency direction explicit: benchmark code may depend on the core workspace stack (`sage-common`/L1, `sage-kernel`/L2, `sage-cli`/L3, `sage-studio`/L4) as needed, but core packages must never depend on benchmark code.
 - Do not create new local virtual environments (`venv`/`.venv`); use the existing configured Python environment.
 - Use typed APIs, clear docstrings, and config-driven experiments.
 - Follow prepare/run/finalize experiment lifecycle.
