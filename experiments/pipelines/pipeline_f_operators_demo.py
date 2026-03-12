@@ -25,7 +25,7 @@ from collections.abc import Hashable, Iterable
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from sage.common.core import (
+from sage.foundation import (
     BaseCoMapFunction,
     BaseJoinFunction,
     BatchFunction,
@@ -36,7 +36,7 @@ from sage.common.core import (
     SinkFunction,
     SourceFunction,
 )
-from sage.kernel.api import LocalEnvironment
+from sage.runtime import LocalEnvironment
 
 # ============================================================================
 # 数据模型

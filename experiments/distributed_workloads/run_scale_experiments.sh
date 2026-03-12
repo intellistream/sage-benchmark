@@ -144,18 +144,17 @@ check_prerequisites() {
         exit 1
     fi
 
-    # 检查 Flownet 集群状态
-    if ! command -v ray &> /dev/null; then
-        print_error "Flownet 运行时未安装（缺少兼容命令入口）"
+    # 检查当前 SAGE 0.3 运行时可见性
+    if ! command -v sage &> /dev/null; then
+        print_error "未找到 sage 命令，无法检查当前 SAGE 运行时状态"
         exit 1
     fi
 
-    ray status &> /dev/null || {
-        print_warning "Flownet 集群未启动，尝试启动..."
-        sage jobmanager start || {
-            print_error "无法启动 Flownet 集群"
-            exit 1
-        }
+    sage runtime nodes > /dev/null 2>&1 || {
+        print_error "当前无法通过 'sage runtime nodes' 看到可用运行时节点"
+        print_error "SAGE 0.3 不再自动启动 sage jobmanager / sage cluster 旧命令"
+        print_error "请先准备好外部 Flutty / JobManager-compatible 运行时，再重试"
+        exit 1
     }
 
     # 检查服务可用性
@@ -405,7 +404,7 @@ PYEOF
 
 ## 目录结构
 
-\`\`\`
+\`\`\`text
 ${OUTPUT_BASE_DIR}/
 ├── configs/          # 每次实验的配置文件
 ├── logs/             # 每次实验的日志

@@ -42,13 +42,13 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 
-from sage.common.core import (
+from sage.foundation import (
     FilterFunction,
     MapFunction,
     SinkFunction,
     SourceFunction,
 )
-from sage.kernel.api import FlownetEnvironment, LocalEnvironment
+from sage.runtime import FluttyEnvironment as FlownetEnvironment, LocalEnvironment
 
 # 支持直接运行和模块运行
 try:

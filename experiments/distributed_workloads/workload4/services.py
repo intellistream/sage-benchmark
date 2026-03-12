@@ -6,7 +6,7 @@ Workload 4 Service Implementations
 
 print("[services.py] Module imported successfully - verifying Service extraction")  # 验证
 
-from sage.kernel.api.service.base_service import BaseService
+from sage.runtime import BaseService
 
 
 class EmbeddingService(BaseService):

@@ -314,13 +314,13 @@ def example_sage_integration():
 Adaptive-RAG 可以无缝集成到 SAGE 数据流系统中:
 
 ```python
-from sage.kernel import StreamExecutionEnvironment
+from sage.runtime import LocalEnvironment
 from experiments.pipelines.adaptive_rag import (
     AdaptiveRAGPipeline, build_sage_pipeline
 )
 
 # 1. 创建 SAGE 执行环境
-env = StreamExecutionEnvironment.get_execution_environment()
+env = LocalEnvironment("adaptive-rag")
 
 # 2. 定义数据源
 query_source = env.from_collection([
@@ -346,7 +346,7 @@ results = build_sage_pipeline(env, query_source)
 results.add_sink(my_sink)
 
 # 5. 执行
-env.execute("adaptive-rag-pipeline")
+env.submit(autostop=True)
 ```
 
 关键特性:

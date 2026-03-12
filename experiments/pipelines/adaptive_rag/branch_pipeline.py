@@ -13,7 +13,7 @@ Adaptive-RAG 流分支 Pipeline 实现
 ```
 
 用法:
-    from sage.kernel.api import LocalEnvironment
+    from sage.runtime import LocalEnvironment
     from experiments.pipelines.adaptive_rag import (
         build_branching_adaptive_rag_pipeline
     )
@@ -30,13 +30,13 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from sage.common.core import (
+from sage.foundation import (
     FilterFunction,
     MapFunction,
     SinkFunction,
     SourceFunction,
 )
-from sage.kernel.api import FlownetEnvironment, LocalEnvironment
+from sage.runtime import FluttyEnvironment as FlownetEnvironment, LocalEnvironment
 
 # 支持直接运行和模块运行两种方式
 try:

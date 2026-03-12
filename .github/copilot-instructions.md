@@ -5,7 +5,7 @@
 - Benchmark modules live under `src/sage/benchmark/...` with pytest tests.
 
 ## Critical rules
-- Keep dependency direction explicit: benchmark code may depend on the core workspace stack (`sage-common`/L1, `sage-kernel`/L2, `sage-cli`/L3, `sage-studio`/L4) as needed, but core packages must never depend on benchmark code.
+- Keep dependency direction explicit: benchmark code may depend on the consolidated core stack (`sage.foundation`/L1, `sage.runtime`+`sage.stream`/L2, `sage.cli`/L3, `sage-studio`/L4) as needed, but core packages must never depend on benchmark code.
 - Do not create new local virtual environments (`venv`/`.venv`); use the existing configured Python environment.
 - Use typed APIs, clear docstrings, and config-driven experiments.
 - Follow prepare/run/finalize experiment lifecycle.

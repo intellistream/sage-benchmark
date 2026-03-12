@@ -30,11 +30,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import time
 from pathlib import Path
 from typing import Any
+
+from experiments.common.inference import create_unified_inference_client, embeddings_to_list
 
 # Ensure package is importable
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -42,8 +45,8 @@ REPO_ROOT = SCRIPT_DIR.parents[1]  # experiments/tool_use_agent -> SAGE
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from sage.common.utils.logging.custom_logger import CustomLogger
-from sage.kernel.api.local_environment import LocalEnvironment
+from sage.foundation import CustomLogger
+from sage.runtime import LocalEnvironment
 
 try:
     from .models import AgentState
@@ -84,20 +87,49 @@ def register_memory_service(env: LocalEnvironment, collection_name: str = "agent
     Falls back gracefully if sage-mem is not available.
     """
     try:
-        from sage.middleware.components.sage_mem.services import HierarchicalMemoryService
+
+        class InMemoryHierarchicalMemoryService:
+            """Benchmark-local memory service with simple relevance retrieval."""
+
+            def __init__(self, collection_name: str, **kwargs):
+                self.collection_name = collection_name
+                self._entries: list[dict[str, Any]] = []
+
+            def insert(self, entry: str | dict[str, Any], metadata: dict[str, Any] | None = None):
+                payload = json.loads(entry) if isinstance(entry, str) else entry
+                self._entries.append(
+                    {
+                        "entry": payload,
+                        "metadata": metadata or {},
+                    }
+                )
+                return {"success": True, "count": len(self._entries)}
+
+            def retrieve(self, query: str, top_k: int = 3):
+                query_terms = {term for term in query.lower().split() if len(term) > 2}
+                ranked = []
+                for item in self._entries:
+                    text = json.dumps(item["entry"], ensure_ascii=False)
+                    lowered = text.lower()
+                    score = sum(1 for term in query_terms if term in lowered)
+                    ranked.append(
+                        {
+                            "content": text,
+                            "score": score,
+                            **item["metadata"],
+                        }
+                    )
+
+                ranked.sort(key=lambda value: value.get("score", 0), reverse=True)
+                return ranked[:top_k]
 
         env.register_service(
             "memory_service",
-            HierarchicalMemoryService,
+            InMemoryHierarchicalMemoryService,
             collection_name=collection_name,
-            tier_mode="three_tier",
-            tier_capacities={"stm": 10, "mtm": 50, "ltm": -1},
         )
-        print("[Pipeline] Registered memory_service (HierarchicalMemoryService)")
+        print("[Pipeline] Registered memory_service (benchmark-local)")
         return True
-    except ImportError as e:
-        print(f"[Pipeline] sage-mem not available: {e}")
-        return False
     except Exception as e:
         print(f"[Pipeline] Failed to register memory_service: {e}")
         return False
@@ -111,23 +143,43 @@ def register_context_service(env: LocalEnvironment, max_length: int = 8192) -> b
     Falls back gracefully if sage-refiner is not available.
     """
     try:
-        from sage.middleware.components.sage_refiner import ContextService
+
+        class SimpleContextService:
+            """Benchmark-local context compression and history service."""
+
+            def __init__(self, max_context_length: int, **kwargs):
+                self.max_context_length = max_context_length
+                self._history: list[dict[str, str]] = []
+
+            def add_to_history(self, role: str, content: str):
+                self._history.append({"role": role, "content": content})
+                return {"success": True, "history_size": len(self._history)}
+
+            def manage_context(self, query: str, history: list[dict[str, str]] | None = None):
+                items = history or self._history
+                compressed = []
+                total = 0
+                for item in reversed(items):
+                    content = item.get("content", "")
+                    if total + len(content) > self.max_context_length:
+                        remaining = self.max_context_length - total
+                        if remaining <= 0:
+                            break
+                        content = content[:remaining]
+                    compressed.append({"role": item.get("role", "user"), "content": content})
+                    total += len(content)
+                    if total >= self.max_context_length:
+                        break
+                compressed.reverse()
+                return {"compressed_context": compressed, "query": query}
 
         env.register_service(
             "context_service",
-            ContextService,
-            config={
-                "max_context_length": max_length,
-                "auto_compress": True,
-                "compress_threshold": 0.8,
-                "refiner": {"algorithm": "simple", "budget": 2000},
-            },
+            SimpleContextService,
+            max_context_length=max_length,
         )
-        print("[Pipeline] Registered context_service (ContextService)")
+        print("[Pipeline] Registered context_service (benchmark-local)")
         return True
-    except ImportError as e:
-        print(f"[Pipeline] sage-refiner not available: {e}")
-        return False
     except Exception as e:
         print(f"[Pipeline] Failed to register context_service: {e}")
         return False
@@ -151,9 +203,6 @@ def register_vector_db_service(
     """
     try:
         import numpy as np
-        from sage.middleware.components.sage_db.python.micro_service.sage_db_service import (
-            SageDBService,
-        )
 
         # Default SAGE knowledge base
         if knowledge_base is None:
@@ -189,20 +238,8 @@ def register_vector_db_service(
         def get_embeddings(texts: list[str]) -> tuple[list[list[float]], int] | None:
             """Get embeddings using UnifiedInferenceClient"""
             try:
-                from sage.common.components.sage_llm import UnifiedInferenceClient
-                from sage.common.components.sage_llm.unified_client import InferenceResult
-
-                client = UnifiedInferenceClient.create()
-                result = client.embed(texts)
-
-                # embed() returns list[list[float]] or InferenceResult
-                embeddings: list[list[float]]
-                if isinstance(result, InferenceResult):
-                    # Extract embeddings from InferenceResult.content
-                    # content is str | list[list[float]], but for embed it is always list[list[float]]
-                    embeddings = result.content  # type: ignore[assignment]
-                else:
-                    embeddings = result
+                client = create_unified_inference_client()
+                embeddings = embeddings_to_list(client.embed(texts))
 
                 if embeddings and len(embeddings) > 0:
                     dim = len(embeddings[0])
@@ -212,11 +249,13 @@ def register_vector_db_service(
             return None
 
         # Create bootstrapped service with real embeddings
-        class BootstrappedSageDBService(SageDBService):
-            """SageDB with pre-loaded knowledge base using real embeddings"""
+        class BootstrappedVectorDBService:
+            """Benchmark-local vector DB with pre-loaded knowledge base."""
 
             def __init__(self, *, initial_data: list[dict], dimension: int, **kwargs):
-                super().__init__(dimension=dimension, **kwargs)
+                self.dimension = dimension
+                self._vectors = None
+                self._metadata: list[dict[str, Any]] = []
 
                 texts = [item.get("text", item.get("content", "")) for item in initial_data]
 
@@ -244,16 +283,37 @@ def register_vector_db_service(
                 for item in initial_data:
                     metadata_list.append(
                         {
+                            "id": item.get("id", item.get("title", "")),
                             "title": item.get("title", ""),
                             "text": item.get("text", item.get("content", "")),
                             "tags": item.get("tags", ""),
                         }
                     )
 
-                # Add to database
-                self.add_batch(vectors, metadata_list)
-                self._db.build_index()
+                self._vectors = np.array(vectors, dtype=np.float32)
+                self._metadata = metadata_list
                 print(f"[Pipeline] Loaded {len(vectors)} documents into vector_db")
+
+            def search(self, query, k: int = 5):
+                query_vec = np.array(query, dtype=np.float32).reshape(-1)
+                if self._vectors is None or self._vectors.size == 0:
+                    return []
+
+                query_norm = np.linalg.norm(query_vec) + 1e-8
+                vector_norms = np.linalg.norm(self._vectors, axis=1) + 1e-8
+                scores = (self._vectors @ query_vec) / (vector_norms * query_norm)
+                ranked_indices = np.argsort(scores)[::-1][:k]
+
+                results = []
+                for idx in ranked_indices:
+                    results.append(
+                        {
+                            "id": self._metadata[idx].get("id"),
+                            "metadata": self._metadata[idx],
+                            "score": float(scores[idx]),
+                        }
+                    )
+                return results
 
         # Auto-detect dimension from embedding service
         if dimension is None:
@@ -268,17 +328,13 @@ def register_vector_db_service(
 
         env.register_service(
             "vector_db",
-            BootstrappedSageDBService,
+            BootstrappedVectorDBService,
             initial_data=knowledge_base,
             dimension=dimension,
-            index_type="AUTO",
         )
-        print("[Pipeline] Registered vector_db (SageDBService)")
+        print("[Pipeline] Registered vector_db (benchmark-local)")
         return True
 
-    except ImportError as e:
-        print(f"[Pipeline] sage-db not available: {e}")
-        return False
     except Exception as e:
         print(f"[Pipeline] Failed to register vector_db: {e}")
         return False

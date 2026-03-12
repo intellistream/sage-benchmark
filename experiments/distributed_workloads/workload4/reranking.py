@@ -15,7 +15,8 @@ import time
 from typing import Any
 
 import numpy as np
-from sage.common.core.functions import MapFunction
+from sage.foundation import MapFunction
+from sage.runtime import StopSignal
 
 from .models import (
     ClusteringResult,
@@ -81,8 +82,6 @@ class MultiDimensionalReranker(MapFunction):
         Returns:
             (joined_event, graph_results, 重排序后的 RerankingResult 列表)
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(data, StopSignal):
             return data
 
@@ -356,8 +355,6 @@ class MMRDiversityFilter(MapFunction):
         Returns:
             (joined_event, graph_results, MMR 过滤后的结果列表)
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(data, StopSignal):
             return data
 

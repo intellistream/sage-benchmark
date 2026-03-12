@@ -5,7 +5,7 @@ Union CoMap Operator for Workload 4
 简单的 Union 算子，用于汇聚多个流的数据。
 """
 
-from sage.common.core.functions.comap_function import BaseCoMapFunction
+from sage.foundation import BaseCoMapFunction
 
 
 class UnionCoMap(BaseCoMapFunction):

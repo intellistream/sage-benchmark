@@ -1,11 +1,11 @@
 \section{Appendix}
 \label{sec:appendix}
 
-In this appendix, we provide the implementation details of the SAGE architecture that were omitted from the main text for brevity. This includes the complete package hierarchy, the logical-to-physical graph compilation process, the formal execution loop algorithm, and specifications for middleware and fault tolerance mechanisms.
+In this appendix, we provide the implementation details of the current SAGE architecture that were omitted from the main text for brevity. This includes the consolidated package hierarchy, the logical-to-physical graph compilation process, the formal execution loop algorithm, and specifications for optional adapter integration and fault tolerance mechanisms.
 
 \subsection{Detailed Package Structure}
 \label{subsec:app_package}
-SAGE follows a strict layered architecture ($L1 \rightarrow L5$) where higher layers may only depend on lower layers. Table~\ref{tab:package_structure} summarizes the package hierarchy and the responsibilities of each layer.
+SAGE follows a strict layered architecture ($L1 \rightarrow L5$) where higher layers may only depend on lower layers. Table~\ref{tab:package_structure} summarizes the consolidated package hierarchy and the responsibilities of each layer.
 
 \begin{table}[h]
 \centering
@@ -15,12 +15,12 @@ SAGE follows a strict layered architecture ($L1 \rightarrow L5$) where higher la
 \begin{tabular}{@{}llp{5cm}l@{}}
 \toprule
 \textbf{Layer} & \textbf{Package} & \textbf{Responsibility} & \textbf{Key Components} \\ \midrule
-L1 & \texttt{sage-common} & Foundation & Shared types, \texttt{SagePorts}, Environment keys \\
-L2 & \texttt{sage-platform} & Platform Services & \texttt{QueueDescriptor}, \texttt{BaseKVBackend}, Lifecycle Mgr \\
-L3 & \texttt{sage-kernel} & Core Runtime & \texttt{ExecutionGraph}, \texttt{Dispatcher}, \texttt{TaskNode} \\
-L3 & \texttt{sage-libs} & Algorithmic Blocks & \texttt{RAGPipeline}, Agent protocols, Typed artifacts \\
-L4 & \texttt{sage-middleware} & Middleware Operators & \texttt{sage\_db}, \texttt{sage\_mem}, \texttt{SageLLMGenerator} \\
-L5 & \texttt{sage-cli} & Tooling & Command-line interface, Quality tools \\ \bottomrule
+L1 & \texttt{isage / sage.foundation} & Foundation & Shared types, \texttt{SagePorts}, configuration, logging \\
+L2 & \texttt{isage / sage.runtime} & Runtime Services & Environments, schedulers, services, placement contracts \\
+L3 & \texttt{isage / sage.stream} & Core Dataflow & \texttt{DataStream}, transformations, runtime packet types \\
+L3 & Optional adapters & Algorithmic / retrieval blocks & \texttt{isagellm}, \texttt{isage-rag}, memory/vector integrations \\
+L4 & Benchmark / examples adapters & End-to-end integrations & Local helpers, vector backends, benchmark-specific orchestration \\
+L5 & Tooling / apps & User workflows & CLI, applications, benchmark runners \\\bottomrule
 \end{tabular}%
 }
 \end{table}

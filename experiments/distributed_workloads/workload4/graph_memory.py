@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 import networkx as nx
 import numpy as np
-from sage.common.core.functions.map_function import MapFunction
+from sage.foundation import MapFunction
 
 try:
     from .models import GraphMemoryResult, JoinedEvent
@@ -331,8 +331,6 @@ class GraphMemoryRetriever(MapFunction):
         Returns:
             GraphEnrichedEvent 包含原始查询和 graph 结果
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         from .models import GraphEnrichedEvent
 
         self.logger.debug(f"[EXEC] Received data type: {type(data).__name__}")

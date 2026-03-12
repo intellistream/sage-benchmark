@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
-from sage.common.config.ports import SagePorts
+from sage.foundation import SagePorts
 
 
 @dataclass

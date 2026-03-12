@@ -21,7 +21,7 @@ from collections import OrderedDict
 from typing import Any
 
 import numpy as np
-from sage.common.core.functions.comap_function import BaseCoMapFunction
+from sage.foundation import BaseCoMapFunction
 
 from .models import DocumentEvent, JoinedEvent, QueryEvent
 

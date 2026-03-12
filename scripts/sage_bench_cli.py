@@ -1,14 +1,14 @@
 import argparse
+import sys
+from pathlib import Path
 
-from sage.common.config.ports import SagePorts
+from sage.foundation import SagePorts
 
 _DEFAULT_GATEWAY_URL = f"http://localhost:{SagePorts.GATEWAY_DEFAULT}"
 
-from sage.benchmark.benchmark_sage.experiments.exp_5_1_e2e_pipeline import E2EPipelineExperiment
-from sage.benchmark.benchmark_sage.experiments.exp_5_2_control_plane import ControlPlaneExperiment
-from sage.benchmark.benchmark_sage.experiments.exp_5_3_isolation import IsolationExperiment
-from sage.benchmark.benchmark_sage.experiments.exp_5_4_scalability import ScalabilityExperiment
-from sage.benchmark.benchmark_sage.experiments.exp_5_5_heterogeneity import HeterogeneityExperiment
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from experiments.config import ExperimentConfig, WorkloadConfig
 
@@ -36,6 +36,20 @@ def main():
     args = parser.parse_args()
 
     if args.command == "run":
+        from sage.benchmark.benchmark_sage.experiments.exp_5_1_e2e_pipeline import (
+            E2EPipelineExperiment,
+        )
+        from sage.benchmark.benchmark_sage.experiments.exp_5_2_control_plane import (
+            ControlPlaneExperiment,
+        )
+        from sage.benchmark.benchmark_sage.experiments.exp_5_3_isolation import IsolationExperiment
+        from sage.benchmark.benchmark_sage.experiments.exp_5_4_scalability import (
+            ScalabilityExperiment,
+        )
+        from sage.benchmark.benchmark_sage.experiments.exp_5_5_heterogeneity import (
+            HeterogeneityExperiment,
+        )
+
         config = ExperimentConfig(
             name=args.name,
             description=f"Run {args.exp} at {args.rate} req/s",

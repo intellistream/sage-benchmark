@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from experiments.common.inference import create_unified_inference_client, response_to_text
+
 
 # 复杂度等级定义
 class QueryComplexityLevel(str, Enum):
@@ -262,9 +264,7 @@ Classification:"""
         if self.llm_client is None:
             # 尝试创建默认客户端
             try:
-                from sage.common.components.sage_llm import UnifiedInferenceClient
-
-                self.llm_client = UnifiedInferenceClient.create()
+                self.llm_client = create_unified_inference_client()
             except ImportError:
                 raise RuntimeError("LLM client not available. Please provide an llm_client.")
 
@@ -273,9 +273,7 @@ Classification:"""
         try:
             response = self.llm_client.chat(prompt)
             # 解析响应
-            response_text = (
-                response.strip() if isinstance(response, str) else response.content.strip()
-            )
+            response_text = response_to_text(response).strip()
             classification, reasoning = self._parse_response(response_text)
 
             return ClassificationResult(

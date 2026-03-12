@@ -29,12 +29,9 @@ classifiers = [
 
 # Core dependencies - external + SAGE packages from PyPI
 dependencies = [
-    # SAGE dependencies from PyPI
-    "isage-common>=0.2.3",
-    "isage-platform>=0.2.3",   # Provides sage.platform.runtime required by experiment runners
-    "isage-kernel>=0.2.3",
-    "isage-middleware>=0.2.3",
-    "isage-libs>=0.2.0.6",
+    # SAGE 0.3 main product surface
+    "isage>=0.3.0",
+    "isagellm>=0.5.4.3; python_version < '3.13'",
 
     # Note: sage.data is included as a submodule in src/sage/data
     # and will be installed as part of this package
@@ -77,7 +74,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/intellistream/SAGE"
-Documentation = "https://intellistream.github.io/SAGE"
+Documentation = "https://intellistream.github.io/sage-docs"
 Repository = "https://github.com/intellistream/SAGE"
 Issues = "https://github.com/intellistream/SAGE/issues"
 

@@ -14,7 +14,8 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from sage.common.core import MapFunction
+from experiments.common.inference import create_unified_inference_client, response_to_text
+from sage.foundation import MapFunction
 
 # 支持直接运行和模块运行两种方式
 try:
@@ -70,9 +71,7 @@ class BaseRAGStrategyFunction(MapFunction):
         """获取 LLM 客户端（延迟初始化）"""
         if self.llm_client is None:
             try:
-                from sage.common.components.sage_llm import UnifiedInferenceClient
-
-                self.llm_client = UnifiedInferenceClient.create()
+                self.llm_client = create_unified_inference_client()
             except ImportError:
                 raise RuntimeError("LLM client not available")
         return self.llm_client
@@ -80,13 +79,7 @@ class BaseRAGStrategyFunction(MapFunction):
     def _get_retriever(self):
         """获取检索器（延迟初始化）"""
         if self.retriever is None:
-            try:
-                from sage.middleware.operators.rag import MilvusDenseRetriever
-
-                self.retriever = MilvusDenseRetriever(config=self.config.get("retriever", {}))
-            except ImportError:
-                # 使用简单的模拟检索器
-                self.retriever = SimpleRetriever()
+            self.retriever = SimpleRetriever()
         return self.retriever
 
     @abstractmethod
@@ -134,7 +127,7 @@ Answer:"""
 
         try:
             response = llm.chat(prompt)
-            answer = response if isinstance(response, str) else response.content
+            answer = response_to_text(response)
         except Exception as e:
             answer = f"Error generating answer: {e}"
 

@@ -15,9 +15,8 @@ import random
 import time
 from typing import TYPE_CHECKING, Any
 
-from sage.common.core.functions.map_function import MapFunction
-from sage.common.core.functions.source_function import SourceFunction
-from sage.kernel.runtime.communication.packet import StopSignal
+from sage.foundation import MapFunction, SourceFunction
+from sage.runtime import StopSignal
 
 if TYPE_CHECKING:
     from .models import DocumentEvent, QueryEvent
@@ -684,8 +683,6 @@ class EmbeddingPrecompute(MapFunction):
         Returns:
             带有 embedding 的事件
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(data, StopSignal):
             return data
 
@@ -817,8 +814,6 @@ class BatchedEmbeddingPrecompute(MapFunction):
 
         当前实现：仅演示逻辑，实际使用建议用单个版本。
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(data, StopSignal):
             return data
         self._buffer.append(data)

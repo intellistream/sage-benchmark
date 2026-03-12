@@ -19,19 +19,18 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from sage.common.core.functions.filter_function import FilterFunction
-from sage.common.core.functions.map_function import MapFunction
-from sage.common.core.functions.sink_function import SinkFunction
-from sage.common.core.functions.source_function import SourceFunction
-from sage.kernel.runtime.communication.packet import StopSignal
+from sage.foundation import FilterFunction, MapFunction, SinkFunction, SourceFunction
+from sage.runtime import StopSignal
 
 if TYPE_CHECKING:
     from .models import TaskState
 
 try:
     from .models import TaskState
+    from .inference import create_unified_inference_client, response_to_text
 except ImportError:
     from models import TaskState
+    from inference import create_unified_inference_client, response_to_text
 
 
 # 示例查询池 - 包含 ZERO/SINGLE/MULTI 三种复杂度
@@ -48,19 +47,19 @@ SAMPLE_QUERIES = [
     # --- Group 3 ---
     "License type",  # ZERO
     "What are the different scheduler strategies available?",  # SINGLE
-    "What is the relationship between sage-kernel and sage-middleware components?",  # MULTI
+    "What is the relationship between SAGE runtime, stream operators, and optional service adapters?",  # MULTI
     # --- Group 4 ---
     "Default port",  # ZERO
     "How does the memory service work in SAGE?",  # SINGLE
     "Compare FIFO and LoadAware schedulers and their impact on throughput",  # MULTI
     # --- Group 5 ---
     "Flownet cluster",  # ZERO
-    "What is the role of middleware components?",  # SINGLE
+    "What is the role of optional service adapters in SAGE?",  # SINGLE
     "Analyze the effects of parallelism settings on pipeline performance",  # MULTI
     # --- Extra SINGLE queries ---
     "How to configure LLM services in SAGE?",
     "What embedding models are supported?",
-    "What is the purpose of sage-kernel package?",
+    "What is the purpose of the consolidated isage runtime package?",
     "What vector databases are supported?",
     "What are the CPU node requirements?",
 ]
@@ -218,9 +217,7 @@ class LLMOperator(MapFunction):
         """延迟初始化 LLM 客户端"""
         if self._llm_client is None:
             try:
-                from sage.common.components.sage_llm import UnifiedInferenceClient
-
-                self._llm_client = UnifiedInferenceClient.create(
+                self._llm_client = create_unified_inference_client(
                     control_plane_url=self.llm_base_url,
                     default_llm_model=self.llm_model,
                 )
@@ -247,7 +244,7 @@ class LLMOperator(MapFunction):
                     {"role": "user", "content": state.query},
                 ]
                 response = client.chat(messages, max_tokens=self.max_tokens)
-                state.response = str(response) if not isinstance(response, str) else response
+                state.response = response_to_text(response)
             else:
                 # Fallback: 模拟响应
                 state.response = f"[Simulated] Response to: {state.query[:50]}..."
@@ -298,9 +295,7 @@ class RAGOperator(MapFunction):
         if self._initialized:
             return
         try:
-            from sage.common.components.sage_llm import UnifiedInferenceClient
-
-            self._client = UnifiedInferenceClient.create(
+            self._client = create_unified_inference_client(
                 control_plane_url=self.llm_base_url,
                 default_llm_model=self.llm_model,
                 default_embedding_model=self.embedding_model,
@@ -1532,6 +1527,60 @@ class SimpleReranker(MapFunction):
                 f"[SimpleReranker] ERROR - task_id={state.task_id}, error={state.error}"
             )
 
+        return state
+
+
+class SimpleContextRefiner(MapFunction):
+    """Lightweight benchmark-local refiner that compresses retrieved context."""
+
+    def __init__(
+        self,
+        config: dict[str, Any] | None = None,
+        stage: int = 3,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.config = config or {}
+        self.stage = stage
+        self._hostname = socket.gethostname()
+
+    def execute(self, data: TaskState) -> TaskState:
+        """Compress retrieved document content before prompt construction."""
+        if not isinstance(data, TaskState):
+            return data
+
+        state = data
+        state.node_id = self._hostname
+        state.stage = self.stage
+        state.operator_name = f"SimpleContextRefiner_{self.stage}"
+        state.mark_started()
+
+        budget = int(self.config.get("budget", 2048))
+        rate = float(self.config.get("rate", 0.6))
+        rate = min(max(rate, 0.1), 1.0)
+
+        try:
+            remaining = budget
+            refined_docs = []
+            for doc in state.retrieved_docs:
+                if remaining <= 0:
+                    break
+
+                content = doc.get("content", "")
+                target_len = max(1, min(len(content), int(len(content) * rate), remaining))
+                refined_docs.append({**doc, "content": content[:target_len]})
+                remaining -= target_len
+
+            state.retrieved_docs = refined_docs
+            state.metadata["refiner_budget"] = budget
+            state.metadata["refiner_rate"] = rate
+            state.metadata["num_refined"] = len(refined_docs)
+            state.success = True
+        except Exception as e:
+            state.success = False
+            state.error = str(e)
+
+        state.mark_completed()
         return state
 
 

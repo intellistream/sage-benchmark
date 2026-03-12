@@ -41,19 +41,15 @@ from typing import Any
 
 import yaml
 
-# 添加 SAGE 到路径
+# 添加工作区源码路径（优先使用主仓单一 `isage` surface）
 _THIS_FILE = Path(__file__).resolve()
-SAGE_ROOT = _THIS_FILE.parents[6] if len(_THIS_FILE.parents) > 6 else None
-if SAGE_ROOT is not None:
-    for _rel in (
-        "packages/sage-kernel/src",
-        "packages/sage-common/src",
-        "packages/sage-libs/src",
-        "packages/sage-benchmark/src",
-    ):
-        _p = str(SAGE_ROOT / _rel)
-        if _p not in sys.path:
-            sys.path.insert(0, _p)
+BENCHMARK_ROOT = _THIS_FILE.parents[2]
+if str(BENCHMARK_ROOT) not in sys.path:
+    sys.path.insert(0, str(BENCHMARK_ROOT))
+
+_workspace_sage_src = _THIS_FILE.parents[4] / "SAGE" / "src"
+if _workspace_sage_src.exists() and str(_workspace_sage_src) not in sys.path:
+    sys.path.insert(0, str(_workspace_sage_src))
 
 # 添加 backends 抽象层路径（相对于本文件所在目录的上两级）
 _BACKENDS_ROOT = Path(__file__).resolve().parents[1]

@@ -20,10 +20,9 @@ import re
 import time
 from typing import TYPE_CHECKING
 
-from sage.common.core.functions.map_function import MapFunction
-from sage.common.core.functions.sink_function import SinkFunction
-from sage.common.core.functions.source_function import SourceFunction
-from sage.kernel.runtime.communication.packet import StopSignal
+from experiments.common.inference import create_unified_inference_client, response_to_text
+from sage.foundation import MapFunction, SinkFunction, SourceFunction
+from sage.runtime import StopSignal
 
 if TYPE_CHECKING:
     from .agent_tools import ToolRegistry
@@ -96,9 +95,7 @@ class ToolSelector(MapFunction):
         """Lazy initialization of LLM client"""
         if self._llm_client is None:
             try:
-                from sage.common.components.sage_llm import UnifiedInferenceClient
-
-                self._llm_client = UnifiedInferenceClient.create()
+                self._llm_client = create_unified_inference_client()
             except Exception as e:
                 print(f"[ToolSelector] LLM client unavailable: {e}")
                 self._llm_client = None
@@ -282,7 +279,7 @@ Your response:"""
                 response = llm_client.chat(messages)
 
                 # Convert response to string if needed
-                response_text = str(response) if not isinstance(response, str) else response
+                response_text = response_to_text(response)
 
                 # Extract thought from response
                 thought_match = re.search(
@@ -439,9 +436,7 @@ class ResponseGenerator(MapFunction):
         """Lazy initialization of LLM client"""
         if self._llm_client is None:
             try:
-                from sage.common.components.sage_llm import UnifiedInferenceClient
-
-                self._llm_client = UnifiedInferenceClient.create()
+                self._llm_client = create_unified_inference_client()
             except Exception:
                 self._llm_client = None
         return self._llm_client
@@ -572,7 +567,7 @@ Your answer:"""
                 response = llm_client.chat(messages)
 
                 # Convert response to string if needed
-                response_text = str(response) if not isinstance(response, str) else response
+                response_text = response_to_text(response)
 
                 # Extract response part
                 resp_match = re.search(

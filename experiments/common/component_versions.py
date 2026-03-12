@@ -1,4 +1,4 @@
-"""Collect SAGE ecosystem component versions for benchmark metadata."""
+"""Collect current SAGE ecosystem component versions for benchmark metadata."""
 
 from __future__ import annotations
 
@@ -6,11 +6,6 @@ from importlib import metadata
 
 CORE_PACKAGES = [
     "isage",
-    "isage-common",
-    "isage-platform",
-    "isage-kernel",
-    "isage-libs",
-    "isage-middleware",
     "isagellm",
     "isage-flownet",
     "isage-vdb",
@@ -25,7 +20,7 @@ CORE_PACKAGES = [
 
 
 def collect_component_versions() -> dict[str, str]:
-    """Collect versions of core SAGE-related Python packages."""
+    """Collect versions of core and optional SAGE-related Python packages."""
     installed = {}
     for dist in metadata.distributions():
         name = (dist.metadata.get("Name") or "").strip().lower()
@@ -35,6 +30,7 @@ def collect_component_versions() -> dict[str, str]:
     versions: dict[str, str] = {}
     for package in CORE_PACKAGES:
         versions[package] = installed.get(package, "unknown")
+    return versions
 
 
 def resolve_first_installed_version(

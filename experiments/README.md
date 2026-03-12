@@ -4,7 +4,7 @@ SAGE 分布式调度策略的性能评测实验。
 
 ## 目录结构
 
-```
+```text
 distributed_scheduling/
  common/                         # 通用组件
    ├── models.py                   # 数据模型 (TaskState, Config, Metrics)
@@ -26,24 +26,29 @@ distributed_scheduling/
 
 ## 前置条件
 
-1. **启动 Flownet 集群** (多节点实验需要):
+> 注意：本目录包含历史分布式实验脚本。SAGE 0.3 主仓已经收敛 CLI 表面，不再提供 `sage cluster` / `sage jobmanager` / `sage llm` 这些旧命令。
+> 如需继续运行这些实验，请先完成对应实验脚本对新架构的迁移，或在兼容环境中自行提供 Flutty / JobManager / sagellm 服务。
 
-   ```bash
-   # 编辑 config/cluster.yaml 配置节点
-   sage cluster start
-   ```
+1. **准备 Flutty 集群** (多节点实验需要):
 
-1. **启动 JobManager**:
+  ```bash
+  # 编辑 config/cluster.yaml 配置节点
+  # 然后使用您自己的 Flutty/调度部署流程启动集群
+  ```
 
-   ```bash
-   sage jobmanager start
-   ```
+1. **准备 JobManager-compatible 服务**:
+
+  ```bash
+  # 当前主仓不再提供 `sage jobmanager start`
+  # 请先启动与实验脚本匹配的 JobManager 服务
+  ```
 
 1. **LLM/Embedding 服务** (如果使用 RAG/LLM Pipeline):
 
-   ```bash
-   sage llm serve
-   ```
+  ```bash
+  sagellm serve
+  sage serve gateway --probe --json
+  ```
 
 ## 实验说明
 
@@ -156,8 +161,8 @@ python run_experiment.py --concurrency 1 4 8 16 32 --tasks 500
 
 ```bash
 # 1. 启动服务
-sage jobmanager start
-sage cluster start
+# 先准备外部 Flutty / JobManager 服务
+sagellm serve
 
 # 2. 运行快速测试
 ./run_all.sh --quick
@@ -170,8 +175,15 @@ ls exp3_latency_throughput/results/
 
 ## 输出文件
 
-```
-    if current_time - self._cache_ttl: > self._cache_::::::
+```text
+results/
+├── *_summary.txt
+├── *_metrics.json
+├── *_latencies.csv
+├── *_comparison.txt
+├── *_throughput.png
+├── *_latency.png
+└── *_nodes.png
 ```
 
 | 文件               | 描述                    |

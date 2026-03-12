@@ -16,8 +16,8 @@ import time
 from collections import Counter
 from typing import TYPE_CHECKING, Any
 
-from sage.common.core.functions.filter_function import FilterFunction
-from sage.common.core.functions.map_function import MapFunction
+from sage.foundation import FilterFunction, MapFunction
+from sage.runtime import StopSignal
 
 if TYPE_CHECKING:
     from .models import GraphEnrichedEvent, JoinedEvent, VDBResultsWrapper, VDBRetrievalResult
@@ -68,8 +68,6 @@ class VDBRetriever(MapFunction):
         Returns:
             VDBResultsWrapper 包含检索结果列表
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         from .models import VDBResultsWrapper
 
         self.logger.debug(f"[EXEC] Received data type: {type(data).__name__}")
@@ -223,8 +221,6 @@ class VDBResultFilter(FilterFunction):
         Returns:
             True 保留，False 过滤
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(result, StopSignal):
             # FilterFunction 遇到 StopSignal 应该返回 True(让它通过)
             return True

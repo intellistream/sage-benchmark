@@ -36,8 +36,8 @@ class SageRunner(WorkloadRunner):
     -------------------
     ``WorkloadSpec.scheduler_name`` is mapped to a SAGE scheduler instance:
 
-    - ``"fifo"`` / ``"default"`` → :class:`~sage.kernel.scheduler.impl.FIFOScheduler`
-    - ``"load_aware"``           → :class:`~sage.kernel.scheduler.impl.LoadAwareScheduler`
+    - ``"fifo"`` / ``"default"`` → :class:`~sage.runtime.FIFOScheduler`
+    - ``"load_aware"``           → :class:`~sage.runtime.LoadAwareScheduler`
 
     Extra knobs (``WorkloadSpec.extra``)
     -------------------------------------
@@ -51,9 +51,9 @@ class SageRunner(WorkloadRunner):
         return "sage"
 
     def is_available(self) -> bool:
-        """Return ``True`` when the SAGE kernel packages are importable."""
+        """Return ``True`` when the in-tree SAGE runtime is importable."""
         try:
-            import sage.kernel.api  # noqa: F401
+            import sage.runtime  # noqa: F401
 
             return True
         except ImportError:
@@ -67,9 +67,8 @@ class SageRunner(WorkloadRunner):
 
         ``DataSource → HeavyProcessor (parallelism=N) → LightFilter → ResultSink``
         """
-        from sage.common.core import MapFunction, SinkFunction, SourceFunction
-        from sage.kernel.api import FlownetEnvironment
-        from sage.kernel.scheduler.impl import FIFOScheduler, LoadAwareScheduler
+        from sage.foundation import MapFunction, SinkFunction, SourceFunction
+        from sage.runtime import FIFOScheduler, FluttyEnvironment, LoadAwareScheduler
 
         # ------------------------------------------------------------------
         # Workload components – business logic is backend-agnostic
@@ -140,7 +139,7 @@ class SageRunner(WorkloadRunner):
         metrics: dict[str, Any] = {}
 
         try:
-            env = FlownetEnvironment(
+            env = FluttyEnvironment(
                 name=f"bench_{spec.name}_{spec.scheduler_name}",
                 scheduler=scheduler,
             )

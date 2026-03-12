@@ -13,10 +13,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from sage.common.core.functions.filter_function import FilterFunction
-from sage.common.core.functions.flatmap_function import FlatMapFunction
-from sage.common.core.functions.map_function import MapFunction
-from sage.kernel.runtime.communication.packet import StopSignal
+from sage.foundation import FilterFunction, FlatMapFunction, MapFunction
+from sage.runtime import StopSignal
 
 
 class TaggedEvent:

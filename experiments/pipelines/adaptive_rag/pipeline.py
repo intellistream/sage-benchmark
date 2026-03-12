@@ -133,9 +133,9 @@ class AdaptiveRAGPipeline:
 
     与 SAGE 数据流集成:
     ```python
-    from sage.kernel import StreamExecutionEnvironment
+    from sage.runtime import LocalEnvironment
 
-    env = StreamExecutionEnvironment.get_execution_environment()
+    env = LocalEnvironment("adaptive-rag")
 
     # 创建 Pipeline
     pipeline = AdaptiveRAGPipeline()
@@ -145,7 +145,7 @@ class AdaptiveRAGPipeline:
     results = queries.map(pipeline.as_function())
     results.add_sink(result_sink)
 
-    env.execute("adaptive-rag-pipeline")
+    env.submit(autostop=True)
     ```
     """
 
@@ -308,7 +308,7 @@ class AdaptiveRAGPipeline:
 
         用法:
         ```python
-        env = StreamExecutionEnvironment.get_execution_environment()
+        env = LocalEnvironment("adaptive-rag")
         queries = env.from_source(query_source)
         results = queries.map(pipeline.as_function())
         ```
@@ -363,7 +363,7 @@ def build_sage_pipeline(
     构建基于 SAGE 数据流的 Adaptive-RAG Pipeline
 
     Args:
-        env: SAGE StreamExecutionEnvironment
+        env: SAGE LocalEnvironment
         source: 数据源
         pipeline_config: Pipeline 配置
         llm_client: LLM 客户端
@@ -374,16 +374,16 @@ def build_sage_pipeline(
 
     用法:
     ```python
-    from sage.kernel import StreamExecutionEnvironment
+    from sage.runtime import LocalEnvironment
     from experiments.pipelines.adaptive_rag import build_sage_pipeline
 
-    env = StreamExecutionEnvironment.get_execution_environment()
+    env = LocalEnvironment("adaptive-rag")
     source = env.from_collection(["What is AI?", "Compare X and Y"])
 
     results = build_sage_pipeline(env, source)
     results.print()
 
-    env.execute("adaptive-rag")
+    env.submit(autostop=True)
     ```
     """
     pipeline = AdaptiveRAGPipeline(

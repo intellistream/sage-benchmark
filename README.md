@@ -29,7 +29,7 @@ This package is designed for both research experiments and production system eva
 
 ## 📦 Package Structure
 
-```
+```text
 sage-benchmark/
 ├── src/
 │   └── sage/
@@ -83,6 +83,7 @@ pre-commit install
 ```
 
 The `quickstart.sh` script will automatically:
+
 - Initialize all Git submodules (LibAMM, SAGE-DB-Bench, sageData)
 - Check environment and dependencies
 - Display submodule status
@@ -332,16 +333,15 @@ This project is licensed under the MIT License - see the [LICENSE](../../LICENSE
 
 ## 🔗 Related Packages
 
-- **sage-kernel**: Core computation engine for running benchmarks
-- **sage-libs**: RAG components and utilities
-- **sage-middleware**: Vector database services (SageVDB, Milvus)
-- **sage-common**: Common utilities and data types
+- **isage**: Consolidated SAGE core for `sage.foundation`, `sage.stream`, and `sage.runtime`
+- **isagellm**: External inference / gateway engine used by LLM and embedding benchmarks
+- **Optional adapters**: `isage-rag`, `isage-neuromem`, `isage-vdb` when a benchmark needs a specific retrieval or storage backend
 
 ## 📮 Support
 
-- **Documentation**: https://intellistream.github.io/sage-docs/guides/packages/sage-benchmark/
-- **Issues**: https://github.com/intellistream/SAGE/issues
-- **Discussions**: https://github.com/intellistream/SAGE/discussions
+- **Documentation**: <https://intellistream.github.io/sage-docs/guides/packages/sage-benchmark/>
+- **Issues**: <https://github.com/intellistream/SAGE/issues>
+- **Discussions**: <https://github.com/intellistream/SAGE/discussions>
 
 ______________________________________________________________________
 

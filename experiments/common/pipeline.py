@@ -10,7 +10,7 @@ Provides pipeline factories for distributed scheduling benchmarks:
 
 Service Registration:
 - embedding_service: Remote embedding service for vectorization
-- vector_db: SageDBService for knowledge base retrieval
+- vector_db: benchmark-local vector retrieval service for knowledge base retrieval
 - llm_service: LLM service for generation
 """
 
@@ -19,11 +19,10 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
-from sage.kernel.api.service import BaseService
+from sage.runtime import BaseService, FIFOScheduler, FluttyEnvironment, LoadAwareScheduler, LocalEnvironment
 
 if TYPE_CHECKING:
-    from sage.kernel.api.flownet_environment import FlownetEnvironment
-    from sage.kernel.api.local_environment import LocalEnvironment
+    from sage.runtime import FluttyEnvironment, LocalEnvironment
 
 try:
     from .models import BenchmarkConfig, BenchmarkMetrics
@@ -203,9 +202,6 @@ def register_vector_db_service(
                     return
 
                 import numpy as np
-                from sage.middleware.components.sage_db.python.micro_service.sage_db_service import (
-                    SageDBService,
-                )
 
                 # Get dimension
                 dim = self._dim
@@ -218,9 +214,6 @@ def register_vector_db_service(
                     else:
                         dim = 1024
                         print(f"[VectorDB] Using default dimension: {dim}")
-
-                # Create SageDB
-                self._db = SageDBService(dimension=dim, index_type="AUTO")
 
                 # Get embeddings for all documents
                 texts = [item.get("content", item.get("text", "")) for item in self._initial_data]
@@ -241,8 +234,9 @@ def register_vector_db_service(
                         vectors.append(vec)
                     vectors = np.array(vectors, dtype=np.float32)
 
-                # Build metadata
-                metadata_list = [
+                self._db = {}
+                self._db["vectors"] = np.array(vectors, dtype=np.float32)
+                self._db["metadata"] = [
                     {
                         "id": item.get("id", str(i)),
                         "title": item.get("title", ""),
@@ -250,16 +244,32 @@ def register_vector_db_service(
                     }
                     for i, item in enumerate(self._initial_data)
                 ]
-
-                # Add to database
-                self._db.add_batch(vectors, metadata_list)
-                self._db._db.build_index()
                 print(f"[VectorDB] Loaded {len(vectors)} documents")
 
-            def search(self, query_vec, k: int = 5) -> list[tuple[float, dict]]:
+            def search(self, query_vec, k: int = 5, top_k: int | None = None) -> list[tuple[float, dict]]:
                 """Search for similar documents"""
                 self._ensure_initialized()
-                return self._db.search(query_vec, k=k)
+                import numpy as np
+
+                if self._db is None:
+                    return []
+
+                limit = top_k if top_k is not None else k
+                query = np.array(query_vec, dtype=np.float32).reshape(-1)
+                vectors = self._db["vectors"]
+                metadata_list = self._db["metadata"]
+
+                if vectors.size == 0:
+                    return []
+
+                query_norm = np.linalg.norm(query) + 1e-8
+                vector_norms = np.linalg.norm(vectors, axis=1) + 1e-8
+                scores = (vectors @ query) / (vector_norms * query_norm)
+                ranked_indices = np.argsort(scores)[::-1][:limit]
+                return [
+                    (float(scores[idx]), metadata_list[idx])
+                    for idx in ranked_indices
+                ]
 
             def process(self, query_vec, k: int = 5) -> list[tuple[float, dict]]:
                 """Default RPC method - alias for search"""
@@ -268,7 +278,21 @@ def register_vector_db_service(
             def add_batch(self, vectors, metadata_list):
                 """Add documents to the database"""
                 self._ensure_initialized()
-                return self._db.add_batch(vectors, metadata_list)
+                import numpy as np
+
+                if self._db is None:
+                    self._db = {
+                        "vectors": np.array(vectors, dtype=np.float32),
+                        "metadata": list(metadata_list),
+                    }
+                    return None
+
+                self._db["vectors"] = np.concatenate(
+                    [self._db["vectors"], np.array(vectors, dtype=np.float32)],
+                    axis=0,
+                )
+                self._db["metadata"].extend(metadata_list)
+                return None
 
         # Register service class with kwargs (NOT a lambda)
         # ServiceFactory will instantiate the class with context injection
@@ -689,30 +713,23 @@ class SchedulingBenchmarkPipeline:
 
     def _create_scheduler(self):
         """Create scheduler based on config."""
-        from sage.kernel.scheduler.impl import get_scheduler
-
         scheduler_type = self.config.scheduler_type
         platform = "remote" if self.config.use_remote else "local"
 
-        scheduler_kwargs: dict[str, Any] = {"platform": platform}
+        if scheduler_type in {"fifo", "default"}:
+            return FIFOScheduler(platform=platform)
 
-        # Only add max_concurrent for schedulers that support it (FIFO doesn't support it)
-        if scheduler_type in ["load_aware", "priority", "round_robin"]:
-            scheduler_kwargs["max_concurrent"] = self.config.parallelism * 100
+        return LoadAwareScheduler(
+            platform=platform,
+            max_concurrent=self.config.parallelism * 100,
+            strategy=self.config.scheduler_strategy if scheduler_type == "load_aware" else "balanced",
+        )
 
-        # Add strategy for LoadAwareScheduler
-        if scheduler_type == "load_aware":
-            scheduler_kwargs["strategy"] = self.config.scheduler_strategy
-
-        return get_scheduler(scheduler_type, **scheduler_kwargs)
-
-    def _create_environment(self, name: str) -> LocalEnvironment | FlownetEnvironment:
+    def _create_environment(self, name: str) -> LocalEnvironment | FluttyEnvironment:
         """Create execution environment (local or remote)."""
         if self.config.use_remote:
             import os
             from pathlib import Path
-
-            from sage.kernel.api.flownet_environment import FlownetEnvironment
 
             # Get the experiments directory path for sageFlownet runtime_env
             experiments_dir = Path(__file__).resolve().parent.parent
@@ -745,14 +762,12 @@ class SchedulingBenchmarkPipeline:
                 "extra_python_paths": [str(sage_benchmark_src), str(experiments_dir)],
             }
 
-            self.env = FlownetEnvironment(
+            self.env = FluttyEnvironment(
                 name=name,
                 scheduler=self.scheduler,
                 config=config,
             )
         else:
-            from sage.kernel.api.local_environment import LocalEnvironment
-
             self.env = LocalEnvironment(name)
 
         return self.env
@@ -893,7 +908,7 @@ class SchedulingBenchmarkPipeline:
 
     def build_rag_pipeline(self, name: str = "rag_benchmark") -> SchedulingBenchmarkPipeline:
         """
-        Build fine-grained RAG pipeline using sage-middleware operators.
+        Build a fine-grained RAG pipeline using consolidated SAGE operators and local benchmark helpers.
 
         Pipeline: TaskSource -> SimpleRetriever -> SimpleReranker -> SimplePromptor -> SimpleGenerator -> MetricsSink
 
@@ -1096,12 +1111,11 @@ class SchedulingBenchmarkPipeline:
         """
         Build full RAG pipeline with refiner.
 
-        Pipeline: TaskSource -> SimpleRetriever -> SimpleReranker -> RefinerOperator
+        Pipeline: TaskSource -> SimpleRetriever -> SimpleReranker -> SimpleContextRefiner
                   -> SimplePromptor -> SimpleGenerator -> MetricsSink
         """
-        from sage.middleware.operators.rag import RefinerOperator
-
         from .operators import (
+            SimpleContextRefiner,
             SimpleGenerator,
             SimplePromptor,
             SimpleReranker,
@@ -1133,14 +1147,15 @@ class SchedulingBenchmarkPipeline:
                 stage=2,
             )
             .map(
-                RefinerOperator,
+                SimpleContextRefiner,
                 parallelism=self.config.parallelism,
                 config=self._get_refiner_config(),
+                stage=3,
             )
             .map(
                 SimplePromptor,
                 parallelism=self.config.parallelism,
-                stage=3,
+                stage=4,
             )
             .map(
                 SimpleGenerator,
@@ -1149,7 +1164,7 @@ class SchedulingBenchmarkPipeline:
                 llm_model=self.config.llm_model,
                 max_tokens=self.config.max_tokens,
                 output_file=self.config.llm_output_file,
-                stage=4,
+                stage=5,
             )
             .sink(
                 MetricsSink,

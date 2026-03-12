@@ -4,7 +4,7 @@ Workload 4 - Utility Mappers
 临时工具类，用于测试单源 pipeline
 """
 
-from sage.common.core.functions import MapFunction
+from sage.foundation import MapFunction
 
 try:
     from .models import JoinedEvent, QueryEvent
