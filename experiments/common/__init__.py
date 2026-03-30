@@ -35,32 +35,36 @@ from .models import (
     QueryComplexityLevel,
     TaskState,
 )
-from .operators import (
-    # Adaptive-RAG operators
-    AdaptiveRAGQuerySource,
-    AdaptiveRAGResultSink,
-    # General operators
-    ComputeOperator,
-    FinalSynthesizer,
-    # FiQA operators
-    FiQADataLoader,
-    FiQAFAISSRetriever,
-    FiQATaskSource,
-    IterativeReasoner,
-    IterativeRetrievalInit,
-    IterativeRetriever,
-    LLMOperator,
-    MetricsSink,
-    MultiComplexityFilter,
-    NoRetrievalStrategy,
-    QueryClassifier,
-    RAGOperator,
-    SingleComplexityFilter,
-    SingleRetrievalStrategy,
-    TaskSource,
-    ZeroComplexityFilter,
-)
-from .pipeline import SchedulingBenchmarkPipeline, register_fiqa_vdb_service
+try:
+    from .operators import (
+        # Adaptive-RAG operators
+        AdaptiveRAGQuerySource,
+        AdaptiveRAGResultSink,
+        # General operators
+        ComputeOperator,
+        FinalSynthesizer,
+        # FiQA operators
+        FiQADataLoader,
+        FiQAFAISSRetriever,
+        FiQATaskSource,
+        IterativeReasoner,
+        IterativeRetrievalInit,
+        IterativeRetriever,
+        LLMOperator,
+        MetricsSink,
+        MultiComplexityFilter,
+        NoRetrievalStrategy,
+        QueryClassifier,
+        RAGOperator,
+        SingleComplexityFilter,
+        SingleRetrievalStrategy,
+        TaskSource,
+        ZeroComplexityFilter,
+    )
+    from .pipeline import SchedulingBenchmarkPipeline, register_fiqa_vdb_service
+except ModuleNotFoundError:
+    # Some environments only validate lightweight helpers (e.g. CLI args).
+    pass
 from .reproducibility import (
     ParityPlan,
     build_input_parity_plan,
