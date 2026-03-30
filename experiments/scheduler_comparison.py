@@ -44,7 +44,7 @@ from common.metrics_schema import (
 )
 from common.result_writer import append_jsonl_record, export_jsonl_to_csv
 from common.system_profile import collect_system_profile
-from sage.common.core import MapFunction, SinkFunction, SourceFunction
+from sage.foundation import MapFunction, SinkFunction, SourceFunction
 
 try:
     from _version import __version__ as BENCHMARK_VERSION

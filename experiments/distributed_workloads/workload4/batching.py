@@ -15,7 +15,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
-from sage.common.core.functions.map_function import MapFunction
+from sage.foundation import MapFunction
+from sage.runtime import StopSignal
 
 try:
     from .models import BatchContext, JoinedEvent, RerankingResult
@@ -73,8 +74,6 @@ class CategoryBatchAggregator(MapFunction):
         Returns:
             BatchContext 或 None(如果还未达到批次条件)
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(data, StopSignal):
             return data
 
@@ -186,8 +185,6 @@ class GlobalBatchAggregator(MapFunction):
         Returns:
             BatchContext (type="global") 或 None
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(data, StopSignal):
             return data
 

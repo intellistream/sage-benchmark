@@ -11,19 +11,10 @@ from typing import Any
 import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn.metrics.pairwise import cosine_similarity
+from sage.foundation import MapFunction
+from sage.runtime import StopSignal
 
 from .models import ClusteringResult, GraphMemoryResult, VDBRetrievalResult
-
-
-# 简化的基类(避免依赖 sage.kernel)
-class MapFunction:
-    """简化的 MapFunction 基类"""
-
-    def __init__(self, **kwargs):
-        pass
-
-    def execute(self, data):
-        raise NotImplementedError
 
 
 class DBSCANClusteringOperator(MapFunction):
@@ -77,8 +68,6 @@ class DBSCANClusteringOperator(MapFunction):
         Returns:
             (joined_event, graph_results, 去重后的VDB文档列表, 聚类信息)
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(data, StopSignal):
             return data
 
@@ -289,8 +278,6 @@ class SimilarityDeduplicator(MapFunction):
         Returns:
             (joined_id, 去重后的文档列表)
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(data, StopSignal):
             return data
 

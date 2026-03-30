@@ -227,7 +227,7 @@ def example_5_pipeline_integration():
     print("=" * 80)
 
     code = """
-from sage.kernel.runtime import RemoteEnvironment
+from sage.runtime import FluttyEnvironment
 from workload4 import (
     Workload4Config,
     Workload4QuerySource,
@@ -245,9 +245,8 @@ config = Workload4Config(
 )
 
 # 2. 创建分布式环境
-env = RemoteEnvironment(
+env = FluttyEnvironment(
     name="workload4_dual_stream",
-    num_nodes=config.num_nodes,
     head_node=config.head_node,
 )
 

@@ -16,7 +16,7 @@ Pipeline C: Cross-Source Vector Stream Join (跨源向量流相似度 Join)
 - 向量相似度: 基于 embedding 的语义相似度而非精确键匹配
 - TopK 近邻: 找出最相似的 K 个跨源匹配对
 
-注: 这是 SageFlow 的向量流相似度 Join，与 sage.kernel.api.operator.JoinOperator (精确键匹配) 不同
+注: 这是 SAGE 的向量流相似度 Join，与精确键匹配式 join 不同
 
 数据集: ConflictQA / MemAgentBench
 """
@@ -36,16 +36,16 @@ os.environ.pop("https_proxy", None)
 os.environ.pop("HTTPS_PROXY", None)
 
 import httpx
-from sage.common.config.ports import SagePorts
-from sage.common.core import (
+from sage.foundation import (
     FilterFunction,
+    SagePorts,
     MapFunction,
     SinkFunction,
     SourceFunction,
 )
 
 _DEFAULT_EMBEDDING_URL = f"http://localhost:{SagePorts.EMBEDDING_DEFAULT}/v1"
-from sage.kernel.api import FlownetEnvironment
+from sage.runtime import FluttyEnvironment as FlownetEnvironment
 
 from ..common.execution_guard import run_pipeline_bounded
 from .scheduler import HeadNodeScheduler

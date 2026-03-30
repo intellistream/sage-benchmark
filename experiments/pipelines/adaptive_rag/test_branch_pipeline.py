@@ -30,8 +30,8 @@ if __package__ in (None, ""):
 else:
     from ...common.execution_guard import run_pipeline_bounded
     from .classifier import create_classifier
-from sage.common.core import FilterFunction, MapFunction, SinkFunction, SourceFunction
-from sage.kernel.api import LocalEnvironment
+from sage.foundation import FilterFunction, MapFunction, SinkFunction, SourceFunction
+from sage.runtime import LocalEnvironment
 
 # ============================================================================
 # Define Operators

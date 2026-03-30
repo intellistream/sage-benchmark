@@ -13,8 +13,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from sage.common.core.functions.map_function import MapFunction
-from sage.common.core.functions.sink_function import SinkFunction
+from sage.foundation import MapFunction, SinkFunction
+from sage.runtime import StopSignal
 
 if TYPE_CHECKING:
     from .models import BatchContext, Workload4Metrics
@@ -75,8 +75,6 @@ class BatchLLMGenerator(MapFunction):
         Returns:
             [(query_id, response, metrics), ...] 列表
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(batch_context, StopSignal):
             return batch_context
 
@@ -345,8 +343,6 @@ class Workload4MetricsSink(SinkFunction):
         Args:
             data: (query_id, response, metrics) 元组
         """
-        from sage.kernel.runtime.communication.packet import StopSignal
-
         if isinstance(data, StopSignal):
             # SinkFunction 遇到 StopSignal 不需要返回，直接返回 None
             return

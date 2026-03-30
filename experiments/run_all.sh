@@ -29,7 +29,9 @@ fi
 check_jobmanager() {
     if ! nc -z localhost 19001 2>/dev/null; then
         echo -e "${RED}Warning: JobManager not running on port 19001${NC}"
-        echo "Start it with: sage jobmanager start"
+        echo "SAGE 0.3 no longer starts legacy jobmanager/cluster commands automatically"
+        echo "Prepare an external Flutty / JobManager-compatible runtime first"
+        echo "Then verify with: sage runtime nodes"
         echo ""
         read -p "Continue anyway? (y/n) " -n 1 -r
         echo

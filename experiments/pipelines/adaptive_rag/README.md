@@ -99,8 +99,8 @@ config = PipelineConfig(
     classifier_config={"multi_hop_threshold": 2},
 
     # 检索器配置
-    retriever_type="chroma",
-    retriever_config={"collection": "my_docs", "top_k": 5},
+    retriever_type="milvus",
+    retriever_config={"collection_name": "my_docs", "top_k": 5},
 
     # LLM 配置
     llm_model="gpt-4",

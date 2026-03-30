@@ -31,7 +31,7 @@ https://arxiv.org/abs/2403.14403
 
 用法示例（流分支模式）:
 
-    from sage.kernel.api import LocalEnvironment
+    from sage.runtime import LocalEnvironment
     from experiments.pipelines.adaptive_rag import (
         build_branching_adaptive_rag_pipeline
     )

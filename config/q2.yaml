@@ -36,7 +36,7 @@ workload:
 baselines:
   - name: "sage_unified"
     enabled: true
-  - name: "vllm_only"
+  - name: "sagellm_only"
     enabled: true
   - name: "separated"
     enabled: true

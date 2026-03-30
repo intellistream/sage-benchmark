@@ -21,8 +21,7 @@ import os
 import socket
 from typing import Optional
 
-from sage.kernel.scheduler.api import BaseScheduler
-from sage.kernel.scheduler.decision import PlacementDecision
+from sage.runtime import BaseScheduler, PlacementDecision
 
 
 class HeadNodeScheduler(BaseScheduler):
@@ -102,17 +101,14 @@ class HeadNodeScheduler(BaseScheduler):
             if head_node_id:
                 return PlacementDecision(
                     target_node=head_node_id,
-                    placement_strategy="affinity",
                     reason=f"{node_type.capitalize()} bound to head node: {self.local_hostname} (node_id: {head_node_id[:8]}...)",
                 )
             else:
                 return PlacementDecision(
-                    placement_strategy="default",
                     reason=f"{node_type.capitalize()}: Could not get head node ID, using default scheduling",
                 )
 
         # 其他任务使用默认调度（分布到集群）
         return PlacementDecision(
-            placement_strategy="default",
             reason="Default load balancing for compute tasks",
         )

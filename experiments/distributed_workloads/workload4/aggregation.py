@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sage.common.core.functions.join_function import BaseJoinFunction
+from sage.foundation import BaseJoinFunction
 
 if TYPE_CHECKING:
     try:

@@ -39,18 +39,12 @@ performance-critical middleware (L4) and core runtime (L3), while platform servi
 utilities (L1) provide a stable base.
 
 \begin{itemize}
-  \item \textbf{L5 Interface}: Developer-facing CLI (\texttt{sage-cli}) and development tools
-        (\texttt{sage-tools}) for pipeline deployment, testing, and quality assurance.
-  \item \textbf{L4 Middleware}: Performance-critical C++ operators and specialized inference components,
-        including SageVDB (vector search), SageFlow (streaming semantic state), NeuroMem (structured memory),
-        and context refinement modules.
-  \item \textbf{L3 Core}: The streaming runtime (\texttt{sage-kernel}) responsible for dataflow scheduling,
-        operator execution, and fault tolerance; plus algorithm libraries (\texttt{sage-libs}) for RAG,
-        agents, and workflow optimization.
-  \item \textbf{L2 Platform}: Shared infrastructure for storage backends, queue abstractions, and service
-        lifecycle management.
-  \item \textbf{L1 Foundation}: Core utilities, configuration management, type definitions, and unified
-        embedding interfaces.
+  \item \textbf{L5 Interface}: Developer-facing CLI, applications, and benchmark runners built on top of the consolidated core.
+  \item \textbf{L4 Adapters}: Optional vector, memory, and refinement adapters such as SageVDB, NeuroMem, and related external services.
+  \item \textbf{L3 Core}: The consolidated \texttt{isage} runtime and stream stack responsible for dataflow scheduling,
+        operator execution, and fault tolerance.
+  \item \textbf{L2 Runtime Services}: Shared infrastructure for environments, schedulers, queue abstractions, and service lifecycle management.
+  \item \textbf{L1 Foundation}: Core utilities, configuration management, type definitions, ports, and logging interfaces.
 \end{itemize}
 
 \subsection{Pipeline-First Abstraction}

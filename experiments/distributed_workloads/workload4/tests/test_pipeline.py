@@ -46,7 +46,7 @@ except ImportError:
 
 def test_register_embedding_service_local():
     """测试 Embedding Service 注册（Local环境）"""
-    from sage.kernel.api.local_environment import LocalEnvironment
+    from sage.runtime import LocalEnvironment
 
     env = LocalEnvironment(name="test_embedding")
     config = Workload4Config()
@@ -61,7 +61,7 @@ def test_register_embedding_service_local():
 
 def test_register_vdb_services_local():
     """测试 VDB Services 注册（Local环境）"""
-    from sage.kernel.api.local_environment import LocalEnvironment
+    from sage.runtime import LocalEnvironment
 
     env = LocalEnvironment(name="test_vdb")
     config = Workload4Config()
@@ -76,7 +76,7 @@ def test_register_vdb_services_local():
 
 def test_register_graph_memory_service_local():
     """测试 Graph Memory Service 注册（Local环境）"""
-    from sage.kernel.api.local_environment import LocalEnvironment
+    from sage.runtime import LocalEnvironment
 
     env = LocalEnvironment(name="test_graph")
     config = Workload4Config()
@@ -87,7 +87,7 @@ def test_register_graph_memory_service_local():
 
 def test_register_llm_service_local():
     """测试 LLM Service 注册（Local环境）"""
-    from sage.kernel.api.local_environment import LocalEnvironment
+    from sage.runtime import LocalEnvironment
 
     env = LocalEnvironment(name="test_llm")
     config = Workload4Config()
@@ -98,7 +98,7 @@ def test_register_llm_service_local():
 
 def test_register_all_services_local():
     """测试所有 Services 注册（Local环境）"""
-    from sage.kernel.api.local_environment import LocalEnvironment
+    from sage.runtime import LocalEnvironment
 
     env = LocalEnvironment(name="test_all_services")
     config = Workload4Config()

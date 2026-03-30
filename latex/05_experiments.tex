@@ -13,7 +13,7 @@ We evaluate SAGE through comprehensive experiments designed to characterize the 
 % ---------------------------------------------------------------------------
 
 \paragraph{Hardware.}
-We deploy SAGE on a 16-node CPU cluster connected via Gigabit Ethernet. Each node (\texttt{sage-node-1} to \texttt{sage-node-16}) has 8 CPU cores and 32GB RAM. LLM inference is offloaded to a dedicated NVIDIA A100 (80GB) GPU server running vLLM~\citep{kwon2023pagedattention}. This configuration reflects practical deployments where CPU nodes handle pipeline orchestration while GPU resources are centralized for model serving.
+We deploy SAGE on a 16-node CPU cluster connected via Gigabit Ethernet. Each node (\texttt{sage-node-1} to \texttt{sage-node-16}) has 8 CPU cores and 32GB RAM. LLM inference is offloaded to a dedicated NVIDIA A100 (80GB) GPU server running sageLLM~\citep{kwon2023pagedattention}. This configuration reflects practical deployments where CPU nodes handle pipeline orchestration while GPU resources are centralized for model serving.
 
 \paragraph{Software.}
 SAGE is implemented in Python 3.11 with Ray 2.9.0~\citep{moritz2018ray} as the distributed runtime. We use Qwen2.5-3B-Instruct for LLM inference and BAAI/bge-large-en-v1.5 for embedding operations.

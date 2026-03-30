@@ -80,7 +80,7 @@ def example_3_service_registration_only():
     print("Example 3: Service Registration Only")
     print("=" * 80)
 
-    from sage.kernel.api.local_environment import LocalEnvironment
+    from sage.runtime import LocalEnvironment
 
     env = LocalEnvironment(name="example_services")
     config = Workload4Config()

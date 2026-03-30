@@ -4,7 +4,7 @@ import random
 import time
 import uuid
 
-from sage.common.config.ports import SagePorts
+from sage.foundation import SagePorts
 
 _DEFAULT_GATEWAY_URL = f"http://localhost:{SagePorts.GATEWAY_DEFAULT}"
 

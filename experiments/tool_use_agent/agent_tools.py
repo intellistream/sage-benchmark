@@ -25,6 +25,8 @@ import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from experiments.common.inference import create_unified_inference_client, embeddings_to_list
+
 if TYPE_CHECKING:
     pass
 
@@ -142,11 +144,8 @@ class VectorSearchTool(BaseTool):
     def _get_embedding(self, text: str) -> list[float] | None:
         """Convert text to embedding vector using UnifiedInferenceClient"""
         try:
-            from sage.common.components.sage_llm import UnifiedInferenceClient
-
-            client = UnifiedInferenceClient.create()
-            # embed() 返回 list[list[float]]，取第一
-            embeddings = client.embed([text])
+            client = create_unified_inference_client()
+            embeddings = embeddings_to_list(client.embed([text]))
             if isinstance(embeddings, list) and len(embeddings) > 0:
                 return embeddings[0]
         except Exception as e:

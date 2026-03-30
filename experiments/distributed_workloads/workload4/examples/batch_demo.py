@@ -17,7 +17,7 @@ from batching import create_batch_pipeline_stage
 
 # 导入数据模型
 from models import JoinedEvent, QueryEvent
-from sage.kernel.api.local_environment import LocalEnvironment
+from sage.runtime import LocalEnvironment
 
 
 def run_batching_demo():

@@ -1,5 +1,3 @@
 """Version information for sage-benchmark."""
 
-__version__ = "0.1.1.3"
-__author__ = "IntelliStream Team"
-__email__ = "shuhao_zhang@hust.edu.cn"
+from sage_benchmark._version import __author__, __email__, __version__

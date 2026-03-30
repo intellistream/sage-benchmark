@@ -28,13 +28,13 @@ os.environ.pop("https_proxy", None)
 os.environ.pop("HTTPS_PROXY", None)
 
 import httpx
-from sage.common.config.ports import SagePorts
-from sage.common.core import (
+from sage.foundation import (
     MapFunction,
+    SagePorts,
     SinkFunction,
     SourceFunction,
 )
-from sage.kernel.api import FlownetEnvironment
+from sage.runtime import FluttyEnvironment as FlownetEnvironment
 
 _DEFAULT_LLM_URL = f"http://localhost:{SagePorts.LLM_DEFAULT}/v1"
 

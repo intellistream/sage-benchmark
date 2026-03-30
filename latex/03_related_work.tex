@@ -7,8 +7,8 @@ increasingly combine in practice.
 
 \paragraph{LLM serving engines and system optimizations.}
 A large body of work optimizes the inference of a \emph{single} LLM backend, focusing on efficient decoding,
-batching, KV-cache management, and GPU utilization (e.g., vLLM and related systems
-\cite{vllm,orcaserving,sarathi,tensorrt_llm,fastertransformer}). Industrial serving stacks (e.g., Triton
+batching, KV-cache management, and GPU utilization (e.g., sageLLM and related systems
+\cite{kwon2023pagedattention,orcaserving,sarathi,tensorrt_llm,fastertransformer}). Industrial serving stacks (e.g., Triton
 Inference Server \cite{triton} and similar frameworks) provide deployment primitives and model hosting, but
 typically expose limited abstractions for representing multi-stage pipelines that combine retrieval,
 refinement, and memory as first-class, co-optimized operators.
