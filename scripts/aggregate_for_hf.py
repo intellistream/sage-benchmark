@@ -22,11 +22,44 @@ from __future__ import annotations
 
 import json
 import urllib.request
+from collections import Counter
 from pathlib import Path
 
 # HF 配置
 HF_REPO = "intellistream/sage-benchmark-results"
 HF_BRANCH = "main"
+Q_MATRIX_WORKLOADS = frozenset(f"q{index}" for index in range(1, 9))
+REQUIRED_IDENTITY_FIELDS = (
+    "backend",
+    "workload",
+    "run_id",
+    "seed",
+    "nodes",
+    "parallelism",
+    "config_hash",
+)
+
+
+def normalize_workload_name(value: object) -> object:
+    if isinstance(value, str) and value.lower() in Q_MATRIX_WORKLOADS:
+        return value.lower()
+    return value
+
+
+def validate_local_record(record: object, *, source: str) -> dict:
+    """Validate and canonicalise one locally generated record.
+
+    Remote historical records remain readable for backwards compatibility, but
+    malformed new records must not silently enter the publication pipeline.
+    """
+    if not isinstance(record, dict):
+        raise ValueError(f"{source}: expected a JSON object")
+    missing = [field for field in REQUIRED_IDENTITY_FIELDS if record.get(field) is None]
+    if missing:
+        raise ValueError(f"{source}: missing required fields: {', '.join(missing)}")
+    normalized = dict(record)
+    normalized["workload"] = normalize_workload_name(normalized["workload"])
+    return normalized
 
 
 def download_from_hf(filename: str) -> list[dict]:
@@ -86,15 +119,19 @@ def load_local_results(results_dir: Path) -> list[dict]:
     """递归加载 results/ 目录下的所有 unified_results.jsonl 文件。"""
     all_records: list[dict] = []
 
-    for jsonl_file in results_dir.rglob("unified_results.jsonl"):
+    errors: list[str] = []
+    for jsonl_file in sorted(results_dir.rglob("unified_results.jsonl")):
         try:
             skipped = 0
             with jsonl_file.open("r", encoding="utf-8") as fh:
-                for line in fh:
+                for line_number, line in enumerate(fh, start=1):
                     stripped = line.strip()
                     if not stripped:
                         continue
-                    record = json.loads(stripped)
+                    record = validate_local_record(
+                        json.loads(stripped),
+                        source=f"{jsonl_file}:{line_number}",
+                    )
                     if not _is_valid_record(record):
                         skipped += 1
                         continue
@@ -106,9 +143,12 @@ def load_local_results(results_dir: Path) -> list[dict]:
                 print(f"  ✓ 加载: {label}")
         except Exception as e:
             print(f"  ✗ 加载失败: {jsonl_file} - {e}")
-        except Exception as e:
-            print(f"  ✗ 加载失败: {jsonl_file} - {e}")
+            errors.append(str(e))
 
+    if errors:
+        raise ValueError(
+            f"拒绝聚合：发现 {len(errors)} 个格式错误的本地结果文件。请修复上述错误后重试。"
+        )
     return all_records
 
 
@@ -116,7 +156,7 @@ def get_config_key(entry: dict) -> str:
     """生成配置唯一标识 key（用于去重）。"""
     parts = [
         str(entry.get("backend", "")),
-        str(entry.get("workload", "")),
+        str(normalize_workload_name(entry.get("workload", ""))),
         str(entry.get("seed", "")),
         str(entry.get("nodes", "")),
         str(entry.get("parallelism", "")),
@@ -169,6 +209,19 @@ def merge_results(existing: list[dict], new_results: list[dict]) -> list[dict]:
     return list(merged.values())
 
 
+def build_coverage_summary(records: list[dict]) -> dict:
+    """Build deterministic coverage counts for logs and publication."""
+    by_workload = Counter(str(normalize_workload_name(row.get("workload", ""))) for row in records)
+    by_backend = Counter(str(row.get("backend", "")) for row in records)
+    by_seed = Counter(str(row.get("seed", "")) for row in records)
+    return {
+        "total_records": len(records),
+        "by_workload": dict(sorted(by_workload.items())),
+        "by_backend": dict(sorted(by_backend.items())),
+        "by_seed": dict(sorted(by_seed.items())),
+    }
+
+
 def main() -> None:
     print("=" * 70)
     print("📦 SAGE Benchmark - 本地聚合工具")
@@ -209,6 +262,17 @@ def main() -> None:
     with output_file.open("w", encoding="utf-8") as fh:
         json.dump(merged, fh, indent=2, ensure_ascii=False)
     print(f"  ✓ {output_file.name} ({len(merged)} 条)")
+
+    coverage = build_coverage_summary(merged)
+    summary_file = hf_output_dir / "benchmark_summary.json"
+    summary_file.write_text(
+        json.dumps(coverage, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    print("  📊 覆盖统计:")
+    for dimension in ("by_workload", "by_backend", "by_seed"):
+        print(f"    {dimension}: {coverage[dimension]}")
+    print(f"  ✓ {summary_file.name}")
 
     print("\n" + "=" * 70)
     print("✅ 聚合完成！")

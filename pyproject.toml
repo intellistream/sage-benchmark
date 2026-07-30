@@ -63,6 +63,9 @@ full = [
     # Vector DB backends
     "pymilvus[model]>=2.4.0",
 ]
+ray-baseline = [
+    "ray>=2.9.0",
+]
 dev = [
     # dev includes all ML/DB backends — no need for pip install -e .[dev,full]
     "isage-benchmark[full]",

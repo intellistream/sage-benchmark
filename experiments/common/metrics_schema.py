@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 REQUIRED_FIELDS: tuple[str, ...] = (
@@ -29,10 +29,24 @@ REQUIRED_FIELDS: tuple[str, ...] = (
     "timestamp",
 )
 
+Q_MATRIX_WORKLOADS: frozenset[str] = frozenset(f"q{index}" for index in range(1, 9))
+
+
+def normalize_workload_name(value: Any) -> Any:
+    """Return the canonical lower-case identifier for Q1--Q8 workloads.
+
+    Historical records used both ``Q1`` and ``q1``.  Normalising at the schema
+    boundary keeps newly written records stable while leaving unrelated
+    workload names (for example ``scheduler_comparison``) unchanged.
+    """
+    if isinstance(value, str) and value.lower() in Q_MATRIX_WORKLOADS:
+        return value.lower()
+    return value
+
 
 def utc_timestamp() -> str:
     """Return an ISO-8601 UTC timestamp string."""
-    return datetime.now(UTC).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 def compute_config_hash(config: dict[str, Any]) -> str:
@@ -74,7 +88,7 @@ class UnifiedMetricsRecord:
         """Convert record to a JSON-serialisable dict with fixed key set."""
         payload: dict[str, Any] = {
             "backend": self.backend,
-            "workload": self.workload,
+            "workload": normalize_workload_name(self.workload),
             "run_id": self.run_id,
             "seed": int(self.seed),
             "nodes": int(self.nodes),
@@ -99,6 +113,7 @@ def normalize_metrics_record(record: dict[str, Any]) -> dict[str, Any]:
     Missing required fields are set to ``None``.
     """
     normalized = {field: record.get(field, None) for field in REQUIRED_FIELDS}
+    normalized["workload"] = normalize_workload_name(normalized["workload"])
     normalized["config_hash"] = record.get("config_hash")
     normalized["backend_hash"] = record.get("backend_hash")
     normalized["metadata"] = record.get("metadata", {})

@@ -15,11 +15,19 @@ from __future__ import annotations
 
 import json
 import urllib.request
+from collections import Counter
 from pathlib import Path
 
 # HF 配置
 HF_REPO = "intellistream/sage-benchmark-results"
 HF_BRANCH = "main"
+Q_MATRIX_WORKLOADS = frozenset(f"q{index}" for index in range(1, 9))
+
+
+def normalize_workload_name(value: object) -> object:
+    if isinstance(value, str) and value.lower() in Q_MATRIX_WORKLOADS:
+        return value.lower()
+    return value
 
 
 def download_from_hf(filename: str) -> list[dict]:
@@ -56,7 +64,7 @@ def get_config_key(entry: dict) -> str:
     """生成配置唯一标识 key。"""
     parts = [
         str(entry.get("backend", "")),
-        str(entry.get("workload", "")),
+        str(normalize_workload_name(entry.get("workload", ""))),
         str(entry.get("seed", "")),
         str(entry.get("nodes", "")),
         str(entry.get("parallelism", "")),
@@ -120,6 +128,18 @@ def smart_merge(hf_latest: list[dict], user_data: list[dict]) -> list[dict]:
     return list(merged.values())
 
 
+def build_coverage_summary(records: list[dict]) -> dict:
+    by_workload = Counter(str(normalize_workload_name(row.get("workload", ""))) for row in records)
+    by_backend = Counter(str(row.get("backend", "")) for row in records)
+    by_seed = Counter(str(row.get("seed", "")) for row in records)
+    return {
+        "total_records": len(records),
+        "by_workload": dict(sorted(by_workload.items())),
+        "by_backend": dict(sorted(by_backend.items())),
+        "by_seed": dict(sorted(by_seed.items())),
+    }
+
+
 def main() -> None:
     print("=" * 60)
     print("🔀 并发安全合并（GitHub Actions）")
@@ -158,6 +178,12 @@ def main() -> None:
         encoding="utf-8",
     )
     print(f"  ✓ {user_file} ({len(merged)} 条)")
+    summary_file = hf_data_dir / "benchmark_summary.json"
+    summary_file.write_text(
+        json.dumps(build_coverage_summary(merged), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    print(f"  ✓ {summary_file}")
 
     print("\n✅ 并发安全合并完成！")
     print("💡 下一步: 运行 upload_to_hf.py 上传到 Hugging Face")

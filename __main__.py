@@ -15,9 +15,13 @@ Usage examples:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import uuid
+from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import TextIO
 
 WORKLOAD_CATALOG = {
     "Q1": {
@@ -65,6 +69,22 @@ WORKLOAD_CATALOG = {
 VALID_EXPERIMENTS = tuple(WORKLOAD_CATALOG.keys())
 
 
+class _Tee:
+    """Write workload output to both the terminal and its per-run log."""
+
+    def __init__(self, *streams: TextIO):
+        self.streams = streams
+
+    def write(self, data: str) -> int:
+        for stream in self.streams:
+            stream.write(data)
+        return len(data)
+
+    def flush(self) -> None:
+        for stream in self.streams:
+            stream.flush()
+
+
 def _workload_label(exp_q: str) -> str:
     meta = WORKLOAD_CATALOG[exp_q]
     return f"{exp_q} ({meta['name']}, {meta['entry']})"
@@ -84,6 +104,23 @@ def _resolve_default_config_path(base_dir: Path, canonical_q: str) -> Path | Non
     if q_path.exists():
         return q_path
     return None
+
+
+def _write_matrix_status(output_dir: Path, attempts: list[dict[str, object]]) -> None:
+    """Persist a machine-readable status summary, including partial runs."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": 1,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "total": len(attempts),
+        "passed": sum(item["status"] == "passed" for item in attempts),
+        "failed": sum(item["status"] == "failed" for item in attempts),
+        "attempts": attempts,
+    }
+    target = output_dir / "matrix_status.json"
+    temporary = target.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    temporary.replace(target)
 
 
 def main() -> int:
@@ -119,27 +156,36 @@ Examples:
 
     # ── Workload selection (suite-level) ────────────────────────────────────
     selection_grp = parser.add_argument_group("workload selection")
-    selection_grp.add_argument(
+    selection = selection_grp.add_mutually_exclusive_group(required=True)
+    selection.add_argument(
         "--experiment",
         "-e",
         type=str,
         help="Workload to run (Q1..Q8).",
     )
-    selection_grp.add_argument(
-        "--all", "-a", action="store_true", help="Run all workloads in catalog."
-    )
+    selection.add_argument("--all", "-a", action="store_true", help="Run all workloads in catalog.")
     selection_grp.add_argument(
         "--config", "-c", type=str, help="Path to a custom config YAML file."
     )
 
     # ── Standardised benchmark flags (shared across all workloads) ──────────
     add_common_benchmark_args(parser, include_quick=True, include_dry_run=True)
+    failure_grp = parser.add_mutually_exclusive_group()
+    failure_grp.add_argument(
+        "--continue-on-error",
+        dest="fail_fast",
+        action="store_false",
+        help="Run the remaining workloads after a failure (default).",
+    )
+    failure_grp.add_argument(
+        "--fail-fast",
+        dest="fail_fast",
+        action="store_true",
+        help="Stop the matrix immediately after the first failed repetition.",
+    )
+    parser.set_defaults(fail_fast=False)
 
     args = parser.parse_args()
-
-    if not args.experiment and not args.all:
-        parser.print_help()
-        return 1
 
     validate_benchmark_args(args)
 
@@ -179,6 +225,9 @@ Examples:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     results: dict[str, object] = {}
+    attempts: list[dict[str, object]] = []
+    failure_count = 0
+    stop_matrix = False
 
     for exp_q in experiments_to_run:
         run_cfg = build_run_config(args, workload=exp_q)
@@ -236,22 +285,63 @@ Examples:
             experiment.nodes = int(args.nodes)
             experiment.parallelism = int(args.parallelism)
             experiment.run_id = f"{exp_q.lower()}-{args.backend}-{rep}-{uuid.uuid4().hex[:8]}"
+            setup_started = False
             try:
-                experiment.setup()
-                result = experiment.run()
-                experiment.teardown()
+                rep_output.mkdir(parents=True, exist_ok=True)
+                with (rep_output / "run.log").open("a", encoding="utf-8") as log_handle:
+                    with redirect_stdout(_Tee(sys.stdout, log_handle)):
+                        with redirect_stderr(_Tee(sys.stderr, log_handle)):
+                            setup_started = True
+                            experiment.setup()
+                            result = experiment.run()
+                            setup_started = False
+                            experiment.teardown()
                 results.setdefault(exp_q, []).append(result)  # type: ignore[union-attr]
+                attempts.append(
+                    {
+                        "workload": exp_q.lower(),
+                        "repeat": rep,
+                        "run_id": experiment.run_id,
+                        "status": "passed",
+                        "output_dir": str(rep_output),
+                    }
+                )
+                _write_matrix_status(output_dir, attempts)
                 print(
                     f"  Workload {_workload_label(exp_q)}{rep_label} completed. "
                     f"Results saved to {rep_output}"
                 )
             except Exception as exc:  # noqa: BLE001
+                if setup_started:
+                    try:
+                        experiment.teardown()
+                    except Exception as teardown_exc:  # noqa: BLE001
+                        exc = RuntimeError(f"{exc}; teardown also failed: {teardown_exc}")
                 print(f"Error running workload {_workload_label(exp_q)}{rep_label}: {exc}")
+                with (rep_output / "run.log").open("a", encoding="utf-8") as log_handle:
+                    log_handle.write(f"ERROR: {exc}\n")
                 if args.verbose:
                     import traceback
 
                     traceback.print_exc()
                 results.setdefault(exp_q, []).append({"error": str(exc)})  # type: ignore[union-attr]
+                failure_count += 1
+                attempts.append(
+                    {
+                        "workload": exp_q.lower(),
+                        "repeat": rep,
+                        "run_id": experiment.run_id,
+                        "status": "failed",
+                        "error": str(exc),
+                        "output_dir": str(rep_output),
+                    }
+                )
+                _write_matrix_status(output_dir, attempts)
+                if args.fail_fast:
+                    stop_matrix = True
+                    break
+        if stop_matrix:
+            break
 
     if not args.dry_run:
         print(f"\n{'=' * 60}")
@@ -270,7 +360,7 @@ Examples:
                 print(f"  {_workload_label(exp_q)}: COMPLETED")
         print(f"\nResults saved to: {output_dir.absolute()}")
 
-    return 0
+    return 1 if failure_count else 0
 
 
 if __name__ == "__main__":  # pragma: no cover
