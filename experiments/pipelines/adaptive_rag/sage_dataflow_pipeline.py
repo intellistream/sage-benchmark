@@ -42,7 +42,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from experiments.common.inference import create_unified_inference_client
 # ============================================================================
 # SAGE 核心导入
 # ============================================================================
@@ -54,6 +53,8 @@ from sage.foundation import (
     SourceFunction,
 )
 from sage.runtime import LocalEnvironment
+
+from experiments.common.inference import create_unified_inference_client
 
 # 本地分类器导入（支持脚本直接运行和模块运行）
 if __package__ in (None, ""):

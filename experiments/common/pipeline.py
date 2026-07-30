@@ -19,7 +19,13 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
-from sage.runtime import BaseService, FIFOScheduler, FluttyEnvironment, LoadAwareScheduler, LocalEnvironment
+from sage.runtime import (
+    BaseService,
+    FIFOScheduler,
+    FluttyEnvironment,
+    LoadAwareScheduler,
+    LocalEnvironment,
+)
 
 if TYPE_CHECKING:
     from sage.runtime import FluttyEnvironment, LocalEnvironment
@@ -61,7 +67,7 @@ except ImportError:
 
 
 def register_embedding_service(
-    env: LocalEnvironment | FlownetEnvironment,
+    env: LocalEnvironment | FluttyEnvironment,
     base_url: str,
     model: str,
 ) -> bool:
@@ -133,7 +139,7 @@ def register_embedding_service(
 
 
 def register_vector_db_service(
-    env: LocalEnvironment | FlownetEnvironment,
+    env: LocalEnvironment | FluttyEnvironment,
     embedding_base_url: str,
     embedding_model: str,
     knowledge_base: list[dict[str, Any]] | None = None,
@@ -246,7 +252,9 @@ def register_vector_db_service(
                 ]
                 print(f"[VectorDB] Loaded {len(vectors)} documents")
 
-            def search(self, query_vec, k: int = 5, top_k: int | None = None) -> list[tuple[float, dict]]:
+            def search(
+                self, query_vec, k: int = 5, top_k: int | None = None
+            ) -> list[tuple[float, dict]]:
                 """Search for similar documents"""
                 self._ensure_initialized()
                 import numpy as np
@@ -266,10 +274,7 @@ def register_vector_db_service(
                 vector_norms = np.linalg.norm(vectors, axis=1) + 1e-8
                 scores = (vectors @ query) / (vector_norms * query_norm)
                 ranked_indices = np.argsort(scores)[::-1][:limit]
-                return [
-                    (float(scores[idx]), metadata_list[idx])
-                    for idx in ranked_indices
-                ]
+                return [(float(scores[idx]), metadata_list[idx]) for idx in ranked_indices]
 
             def process(self, query_vec, k: int = 5) -> list[tuple[float, dict]]:
                 """Default RPC method - alias for search"""
@@ -318,7 +323,7 @@ def register_vector_db_service(
 
 
 def register_llm_service(
-    env: LocalEnvironment | FlownetEnvironment,
+    env: LocalEnvironment | FluttyEnvironment,
     base_url: str,
     model: str,
     max_tokens: int = 256,
@@ -409,7 +414,7 @@ def register_llm_service(
 
 
 def register_fiqa_vdb_service(
-    env: LocalEnvironment | FlownetEnvironment,
+    env: LocalEnvironment | FluttyEnvironment,
     embedding_base_url: str,
     embedding_model: str,
     data_dir: str = FIQA_DATA_DIR,
@@ -601,7 +606,7 @@ def register_fiqa_vdb_service(
 
 
 def register_all_services(
-    env: LocalEnvironment | FlownetEnvironment,
+    env: LocalEnvironment | FluttyEnvironment,
     config: BenchmarkConfig,
     knowledge_base: list[dict[str, Any]] | None = None,
     vdb_node_ip: str | None = None,
@@ -722,7 +727,9 @@ class SchedulingBenchmarkPipeline:
         return LoadAwareScheduler(
             platform=platform,
             max_concurrent=self.config.parallelism * 100,
-            strategy=self.config.scheduler_strategy if scheduler_type == "load_aware" else "balanced",
+            strategy=self.config.scheduler_strategy
+            if scheduler_type == "load_aware"
+            else "balanced",
         )
 
     def _create_environment(self, name: str) -> LocalEnvironment | FluttyEnvironment:

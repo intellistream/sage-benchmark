@@ -14,8 +14,9 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from experiments.common.inference import create_unified_inference_client, response_to_text
 from sage.foundation import MapFunction
+
+from experiments.common.inference import create_unified_inference_client, response_to_text
 
 # 支持直接运行和模块运行两种方式
 try:

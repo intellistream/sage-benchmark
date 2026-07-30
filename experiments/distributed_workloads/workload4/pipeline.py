@@ -80,7 +80,7 @@ except ImportError:
 
 
 def register_embedding_service(
-    env: LocalEnvironment | FlownetEnvironment,
+    env: LocalEnvironment | FluttyEnvironment,
     config: Workload4Config,
 ) -> bool:
     """
@@ -107,7 +107,7 @@ def register_embedding_service(
 
 
 def register_vdb_services(
-    env: LocalEnvironment | FlownetEnvironment,
+    env: LocalEnvironment | FluttyEnvironment,
     config: Workload4Config,
 ) -> dict[str, bool]:
     """
@@ -149,7 +149,7 @@ def register_vdb_services(
 
 
 def register_graph_memory_service(
-    env: LocalEnvironment | FlownetEnvironment,
+    env: LocalEnvironment | FluttyEnvironment,
     config: Workload4Config,
 ) -> bool:
     """
@@ -177,7 +177,7 @@ def register_graph_memory_service(
 
 
 def register_llm_service(
-    env: LocalEnvironment | FlownetEnvironment,
+    env: LocalEnvironment | FluttyEnvironment,
     config: Workload4Config,
 ) -> bool:
     """
@@ -206,7 +206,7 @@ def register_llm_service(
 
 
 def register_all_services(
-    env: LocalEnvironment | FlownetEnvironment,
+    env: LocalEnvironment | FluttyEnvironment,
     config: Workload4Config,
 ) -> dict[str, bool]:
     """

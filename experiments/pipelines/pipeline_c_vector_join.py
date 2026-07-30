@@ -38,8 +38,8 @@ os.environ.pop("HTTPS_PROXY", None)
 import httpx
 from sage.foundation import (
     FilterFunction,
-    SagePorts,
     MapFunction,
+    SagePorts,
     SinkFunction,
     SourceFunction,
 )

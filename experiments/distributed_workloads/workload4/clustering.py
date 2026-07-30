@@ -9,10 +9,10 @@ from collections import defaultdict
 from typing import Any
 
 import numpy as np
-from sklearn.cluster import DBSCAN
-from sklearn.metrics.pairwise import cosine_similarity
 from sage.foundation import MapFunction
 from sage.runtime import StopSignal
+from sklearn.cluster import DBSCAN
+from sklearn.metrics.pairwise import cosine_similarity
 
 from .models import ClusteringResult, GraphMemoryResult, VDBRetrievalResult
 
