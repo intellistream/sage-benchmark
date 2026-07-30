@@ -26,11 +26,11 @@ if TYPE_CHECKING:
     from .models import TaskState
 
 try:
-    from .models import TaskState
     from .inference import create_unified_inference_client, response_to_text
+    from .models import TaskState
 except ImportError:
-    from models import TaskState
     from inference import create_unified_inference_client, response_to_text
+    from models import TaskState
 
 
 # 示例查询池 - 包含 ZERO/SINGLE/MULTI 三种复杂度

@@ -20,9 +20,10 @@ import re
 import time
 from typing import TYPE_CHECKING
 
-from experiments.common.inference import create_unified_inference_client, response_to_text
 from sage.foundation import MapFunction, SinkFunction, SourceFunction
 from sage.runtime import StopSignal
+
+from experiments.common.inference import create_unified_inference_client, response_to_text
 
 if TYPE_CHECKING:
     from .agent_tools import ToolRegistry

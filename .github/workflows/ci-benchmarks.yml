@@ -15,6 +15,22 @@ on:
         description: "Experiments to run (comma-separated Q-IDs or 'all')"
         required: false
         default: "all"
+      backend:
+        description: "Runtime backend"
+        required: false
+        default: "sage"
+        type: choice
+        options:
+          - sage
+          - ray
+      seed:
+        description: "Random seed"
+        required: false
+        default: "42"
+      parallelism:
+        description: "Single-node operator parallelism"
+        required: false
+        default: "2"
   schedule:
     - cron: "0 2 * * *"
 
@@ -23,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      HF_ENDPOINT: https://hf-mirror.com
+      HF_ENDPOINT: https://huggingface.co
       SAGELLM_PORT: 8888
       SAGELLM_EMBED_PORT: 8890
     steps:
@@ -42,8 +58,11 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "isagellm>=0.5.1.9"
-          python -m pip install -e .
+          if [ "${{ github.event.inputs.backend || 'sage' }}" = "ray" ]; then
+            python -m pip install -e ".[ray-baseline]"
+          else
+            python -m pip install -e .
+          fi
 
       - name: Start sagellm full stack (CPU + embedding, port ${{ env.SAGELLM_PORT }})
         run: |
@@ -62,6 +81,11 @@ jobs:
           for i in $(seq 1 72); do
             if curl -sf "http://localhost:${SAGELLM_PORT}/health" > /dev/null 2>&1; then
               echo "Gateway healthy after ~$((i * 5))s"; break
+            fi
+            if ! kill -0 "$SAGELLM_PID" 2>/dev/null; then
+              echo "::error::sagellm exited before the gateway became healthy"
+              cat /tmp/sagellm.log
+              exit 1
             fi
             [ "$i" -eq 72 ] && { cat /tmp/sagellm.log; exit 1; }
             sleep 5
@@ -86,7 +110,7 @@ jobs:
             | python -c "import sys,json; d=json.load(sys.stdin); print('LLM ok')"
           curl -sf -X POST "http://localhost:${SAGELLM_PORT}/v1/embeddings" \
             -H "Content-Type: application/json" \
-            -d '{"model":"BAAI/bge-small-zh-v1.5","input":["hello"]}' \
+            -d '{"model":"sentence-transformers/all-MiniLM-L6-v2","input":["hello"]}' \
             | python -c "import sys,json; d=json.load(sys.stdin); print('Embed ok, dim='+str(len(d['data'][0]['embedding'])))"
 
       - name: Run Q1-Q8 benchmarks
@@ -94,12 +118,23 @@ jobs:
           QUICK_FLAG=""
           [ "${{ github.event.inputs.quick || 'true' }}" = "true" ] && QUICK_FLAG="--quick"
           EXPERIMENTS="${{ github.event.inputs.experiments || 'all' }}"
+          COMMON_ARGS=(
+            --backend "${{ github.event.inputs.backend || 'sage' }}"
+            --seed "${{ github.event.inputs.seed || '42' }}"
+            --nodes 1
+            --parallelism "${{ github.event.inputs.parallelism || '2' }}"
+            --continue-on-error
+            --output-dir results/ci_run
+          )
           if [ "$EXPERIMENTS" = "all" ]; then
-            python __main__.py --all $QUICK_FLAG --output-dir results/ci_run
+            python __main__.py --all $QUICK_FLAG "${COMMON_ARGS[@]}"
           else
             IFS=',' read -ra EXP_LIST <<< "$EXPERIMENTS"
             for EXP in "${EXP_LIST[@]}"; do
-              python __main__.py --experiment "$(echo "$EXP" | tr -d ' ')" $QUICK_FLAG --output-dir results/ci_run
+              python __main__.py \
+                --experiment "$(echo "$EXP" | tr -d ' ')" \
+                $QUICK_FLAG \
+                "${COMMON_ARGS[@]}"
             done
           fi
 
@@ -111,7 +146,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results-${{ github.run_id }}
-          path: results/ci_run
+          path: |
+            results/ci_run
+            hf_data/benchmark_results.json
+            hf_data/benchmark_summary.json
           if-no-files-found: warn
 
       - name: Upload sagellm logs (on failure)
@@ -120,3 +158,11 @@ jobs:
         with:
           name: sagellm-logs-${{ github.run_id }}
           path: /tmp/sagellm.log
+
+      - name: Stop sagellm
+        if: always()
+        run: |
+          if [ -n "${SAGELLM_PID:-}" ]; then
+            kill "$SAGELLM_PID" 2>/dev/null || true
+            wait "$SAGELLM_PID" 2>/dev/null || true
+          fi

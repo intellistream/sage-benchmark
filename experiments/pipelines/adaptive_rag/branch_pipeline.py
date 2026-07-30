@@ -36,7 +36,8 @@ from sage.foundation import (
     SinkFunction,
     SourceFunction,
 )
-from sage.runtime import FluttyEnvironment as FlownetEnvironment, LocalEnvironment
+from sage.runtime import FluttyEnvironment as FlownetEnvironment
+from sage.runtime import LocalEnvironment
 
 # 支持直接运行和模块运行两种方式
 try:

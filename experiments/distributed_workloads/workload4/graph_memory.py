@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 import networkx as nx
 import numpy as np
 from sage.foundation import MapFunction
+from sage.runtime import StopSignal
 
 try:
     from .models import GraphMemoryResult, JoinedEvent

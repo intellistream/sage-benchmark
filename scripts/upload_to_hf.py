@@ -100,6 +100,7 @@ def main() -> None:
     # 要上传的文件
     files_to_upload = [
         HF_DATA_DIR / "benchmark_results.json",
+        HF_DATA_DIR / "benchmark_summary.json",
     ]
 
     if not HF_DATA_DIR.exists():

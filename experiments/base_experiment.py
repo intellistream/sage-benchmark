@@ -29,6 +29,7 @@ from experiments.common.metrics_schema import (
     UnifiedMetricsRecord,
     compute_backend_hash,
     compute_config_hash,
+    normalize_workload_name,
 )
 from experiments.common.result_writer import (
     append_jsonl_record,
@@ -297,7 +298,7 @@ class BaseExperiment(ABC):
         backend = getattr(self, "backend", "sage")
         nodes = int(getattr(self, "nodes", 1))
         parallelism = int(getattr(self, "parallelism", 2))
-        workload = self.config.experiment_section
+        workload = normalize_workload_name(self.config.experiment_section)
         run_id = getattr(self, "run_id", "") or f"{workload}-{uuid.uuid4().hex[:12]}"
 
         config_payload = {
@@ -339,6 +340,10 @@ class BaseExperiment(ABC):
             backend_hash=compute_backend_hash(backend),
             metadata={
                 "experiment_name": result.experiment_name,
+                "experiment_section": self.config.experiment_section,
+                "seed": self.config.workload.seed,
+                "nodes": nodes,
+                "parallelism": parallelism,
                 "sage_version": resolved_sage_version,
                 "sagellm_version": resolved_sagellm_version,
                 "benchmark_version": BENCHMARK_VERSION,

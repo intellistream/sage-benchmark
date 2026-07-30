@@ -42,6 +42,7 @@ def test_unified_record_contains_all_required_fields():
     assert record["latency_p50"] is None
     assert record["latency_p95"] is None
     assert record["latency_p99"] is None
+    assert record["workload"] == "q1"
 
 
 def test_normalize_metrics_record_fills_missing_with_none():
@@ -50,6 +51,7 @@ def test_normalize_metrics_record_fills_missing_with_none():
         assert key in normalized
     assert normalized["run_id"] is None
     assert normalized["throughput"] is None
+    assert normalized["workload"] == "q2"
 
 
 def test_jsonl_and_csv_writer_roundtrip(tmp_path: Path):

@@ -92,6 +92,10 @@ The `quickstart.sh` script will automatically:
 
 ## ⚡ One-Click Full Pipeline
 
+For the Q1–Q8 runner contract, output schema, CI inputs, aggregation flow, and
+failure troubleshooting, see the
+[Q1–Q8 single-node benchmark guide](docs/q-matrix-benchmark.md).
+
 Run the end-to-end benchmark pipeline in one command:
 
 ```bash
